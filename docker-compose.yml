@@ -39,6 +39,7 @@ services:
     build:
       context: ./backend-nestjs
       dockerfile: Dockerfile
+    image: ingweb-backend-nestjs:latest
     container_name: pastry_backend
     restart: always
     ports:

@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  BAKER
+  ADMIN
+}
+
+enum OrderStatus {
+  DRAFT
+  STRUCTURED
+  CONFIRMED_BY_CLIENT
+  QUOTED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(CLIENT)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("users")
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  clientId         String      @map("client_id")
+  rawText          String      @map("raw_text")
+  status           OrderStatus @default(DRAFT)
+  servings         Int?
+  theme            String?
+  dietaryRestrictions String[] @map("dietary_restrictions")
+  flavors          String[]
+  confidenceScore  Float?      @map("confidence_score")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  client         User           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  webReferences  WebReference[]
+  quote          Quote?
+
+  @@map("orders")
+}
+
+model WebReference {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  title     String
+  imageUrl  String   @map("image_url")
+  source    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("web_references")
+}
+
+model Quote {
+  id           String   @id @default(uuid())
+  orderId      String   @unique @map("order_id")
+  estimatedPrice Decimal @map("estimated_price") @db.Decimal(10, 2)
+  details      String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("quotes")
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+__pycache__/
+.pytest_cache/
+.DS_Store
+postgres_data/
+.angular/
+.agents/
+terraform/.terraform/
+*.tfstate
+*.tfstate.backup

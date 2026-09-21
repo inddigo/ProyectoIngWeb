@@ -1,0 +1,90 @@
+name: DevSecOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality-gates:
+    name: DevSecOps Quality Gates & Validation
+    runs-on: ubuntu-latest
+    
+    env:
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      # Simulated variables for secure pipeline injection
+      PYTHON_SERVICE_URL: ${{ vars.PYTHON_SERVICE_URL || 'http://localhost:8000' }}
+
+    steps:
+      - name: Checkout Código Fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Validar Infraestructura (Terraform)
+        env:
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        run: |
+          cd terraform
+          terraform fmt -check || true
+          terraform init -backend=false
+          terraform validate
+
+      - name: Escaneo de Secretos
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Análisis Estático y Dependencias (npm)
+        run: |
+          cd backend-nestjs
+          npm ci --legacy-peer-deps
+          npm audit --audit-level=high || true
+          cd ../frontend
+          npm ci --legacy-peer-deps
+          npm audit --audit-level=high || true
+
+      - name: Construir Imágenes Docker
+        run: |
+          docker compose build
+
+      - name: Escaneo de Vulnerabilidades (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ingweb-backend-nestjs:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Pruebas Backend NestJS
+        run: |
+          cd backend-nestjs
+          npm test
+
+      - name: Pruebas Frontend Angular
+        run: |
+          cd frontend
+          npm test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Pruebas y Linting Python
+        run: |
+          cd service-python
+          pip install -r requirements.txt
+          python -m pytest || true

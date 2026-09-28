@@ -19,3 +19,7 @@ coverage/
 !.env.example
 *.log
 .coverage
+
+# Material del curso y configuración local de herramientas (no forman parte del proyecto)
+/*.pdf
+skills-lock.json

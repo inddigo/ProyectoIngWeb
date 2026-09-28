@@ -1,0 +1,7 @@
+# Copiar a staging.tfvars (ignorado por git). Los secretos NO van aquí:
+# se entregan como TF_VAR_db_password y TF_VAR_jwt_secret (GitHub Secrets).
+project_id  = "cotiza-staging"
+region      = "us-central1"
+environment = "staging"
+image_tag   = "latest"
+db_tier     = "db-f1-micro"

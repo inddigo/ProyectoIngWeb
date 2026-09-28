@@ -10,3 +10,12 @@ postgres_data/
 terraform/.terraform/
 *.tfstate
 *.tfstate.backup
+coverage/
+.venv/
+.ruff_cache/
+*.tfvars
+!*.tfvars.example
+.env.*
+!.env.example
+*.log
+.coverage

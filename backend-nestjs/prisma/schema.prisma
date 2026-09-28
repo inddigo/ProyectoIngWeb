@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -13,12 +14,16 @@ enum Role {
   ADMIN
 }
 
+// Ciclo de vida de un pedido:
+// CONFIRMED_BY_CLIENT -> QUOTED -> ACCEPTED_BY_CLIENT | REJECTED_BY_CLIENT
+// (DRAFT y STRUCTURED quedan reservados para borradores guardados antes de confirmar)
 enum OrderStatus {
   DRAFT
   STRUCTURED
   CONFIRMED_BY_CLIENT
   QUOTED
-  REJECTED
+  ACCEPTED_BY_CLIENT
+  REJECTED_BY_CLIENT
 }
 
 model User {
@@ -36,22 +41,24 @@ model User {
 }
 
 model Order {
-  id               String      @id @default(uuid())
-  clientId         String      @map("client_id")
-  rawText          String      @map("raw_text")
-  status           OrderStatus @default(DRAFT)
-  servings         Int?
-  theme            String?
-  dietaryRestrictions String[] @map("dietary_restrictions")
-  flavors          String[]
-  confidenceScore  Float?      @map("confidence_score")
-  createdAt        DateTime    @default(now()) @map("created_at")
-  updatedAt        DateTime    @updatedAt @map("updated_at")
+  id              String      @id @default(uuid())
+  clientId        String      @map("client_id")
+  // Rubro del pedido (cake, tattoo, ...). Los atributos varían por rubro y se guardan en JSON.
+  domain          String      @default("cake")
+  rawText         String      @map("raw_text")
+  status          OrderStatus @default(CONFIRMED_BY_CLIENT)
+  attributes      Json?
+  imageUrl        String?     @map("image_url")
+  confidenceScore Float?      @map("confidence_score")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
 
-  client         User           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  webReferences  WebReference[]
-  quote          Quote?
+  client        User           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  webReferences WebReference[]
+  quote         Quote?
 
+  @@index([status])
+  @@index([clientId])
   @@map("orders")
 }
 
@@ -69,11 +76,13 @@ model WebReference {
 }
 
 model Quote {
-  id           String   @id @default(uuid())
-  orderId      String   @unique @map("order_id")
-  estimatedPrice Decimal @map("estimated_price") @db.Decimal(10, 2)
-  details      String
-  createdAt    DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid())
+  orderId        String   @unique @map("order_id")
+  estimatedPrice Decimal  @map("estimated_price") @db.Decimal(10, 2)
+  details        String
+  // Desglose de la calculadora de costos (insumos, mano de obra, margen)
+  breakdown      Json?
+  createdAt      DateTime @default(now()) @map("created_at")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 

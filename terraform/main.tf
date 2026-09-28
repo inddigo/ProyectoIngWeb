@@ -1,67 +1,117 @@
-terraform {
-  required_version = ">= 1.8.0"
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
+locals {
+  prefix   = "cotiza-${var.environment}"
+  registry = "${var.region}-docker.pkg.dev/${var.project_id}/${module.registry.repository_id}"
 }
 
-provider "google" {
-  project = var.gcp_project_id
-  region  = var.gcp_region
+# APIs necesarias
+resource "google_project_service" "apis" {
+  for_each = toset([
+    "run.googleapis.com",
+    "sqladmin.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "secretmanager.googleapis.com",
+  ])
+  service            = each.value
+  disable_on_destroy = false
 }
 
-variable "gcp_project_id" {
-  type        = string
-  description = "ID del proyecto en Google Cloud Platform"
-  default     = "pastry-adaptative-staging"
-}
-
-variable "gcp_region" {
-  type        = string
-  description = "Región de despliegue GCP"
-  default     = "us-central1"
-}
-
-variable "db_password" {
-  type        = string
-  description = "Password para la base de datos PostgreSQL"
-  sensitive   = true
+module "registry" {
+  source        = "./modules/registry"
+  region        = var.region
+  repository_id = local.prefix
+  depends_on    = [google_project_service.apis]
 }
 
 module "database" {
   source      = "./modules/cloudsql"
-  project_id  = var.gcp_project_id
-  region      = var.gcp_region
+  region      = var.region
+  name        = "${local.prefix}-db"
+  tier        = var.db_tier
   db_password = var.db_password
+  depends_on  = [google_project_service.apis]
 }
 
+# ---------- Secretos (Secret Manager) ----------
+resource "google_secret_manager_secret" "jwt" {
+  secret_id = "${local.prefix}-jwt-secret"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "jwt" {
+  secret      = google_secret_manager_secret.jwt.id
+  secret_data = var.jwt_secret
+}
+
+resource "google_secret_manager_secret" "database_url" {
+  secret_id = "${local.prefix}-database-url"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "database_url" {
+  secret      = google_secret_manager_secret.database_url.id
+  secret_data = "postgresql://${module.database.user}:${urlencode(var.db_password)}@localhost/${module.database.database}?host=/cloudsql/${module.database.connection_name}"
+}
+
+# ---------- Servicios Cloud Run ----------
 module "python_service" {
   source       = "./modules/cloudrun"
-  project_id   = var.gcp_project_id
-  region       = var.gcp_region
-  service_name = "pastry-python-service"
-  image_url    = "gcr.io/${var.gcp_project_id}/python-service:latest"
+  region       = var.region
+  service_name = "${local.prefix}-nlp"
+  image        = "${local.registry}/python-service:${var.image_tag}"
+  port         = 8000
+  # Solo accesible por el backend (sin acceso público)
+  public          = false
+  ingress         = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  invoker_members = { backend = "serviceAccount:${module.backend.service_account_email}" }
+  depends_on      = [google_project_service.apis]
 }
 
-module "nestjs_backend" {
+module "backend" {
   source       = "./modules/cloudrun"
-  project_id   = var.gcp_project_id
-  region       = var.gcp_region
-  service_name = "pastry-backend"
-  image_url    = "gcr.io/${var.gcp_project_id}/nestjs-backend:latest"
+  region       = var.region
+  service_name = "${local.prefix}-api"
+  image        = "${local.registry}/backend-nestjs:${var.image_tag}"
+  port         = 3000
+  public       = true
   env_vars = {
+    NODE_ENV           = "production"
     PYTHON_SERVICE_URL = module.python_service.url
-    DATABASE_URL       = "postgresql://pastry_user:${var.db_password}@${module.database.connection_name}/pastry_db"
+    SEED_DEMO_DATA     = var.environment == "staging" ? "true" : "false"
   }
+  secret_env_vars = {
+    JWT_SECRET   = google_secret_manager_secret.jwt.secret_id
+    DATABASE_URL = google_secret_manager_secret.database_url.secret_id
+  }
+  cloudsql_instances = [module.database.connection_name]
+  depends_on         = [google_project_service.apis]
 }
 
-output "python_service_url" {
-  value = module.python_service.url
+module "frontend" {
+  source       = "./modules/cloudrun"
+  region       = var.region
+  service_name = "${local.prefix}-web"
+  image        = "${local.registry}/frontend:${var.image_tag}"
+  port         = 8080
+  public       = true
+  depends_on   = [google_project_service.apis]
 }
 
-output "nestjs_backend_url" {
-  value = module.nestjs_backend.url
+# Permisos mínimos del backend: leer sus secretos y conectarse a Cloud SQL
+resource "google_secret_manager_secret_iam_member" "backend_secrets" {
+  for_each  = { jwt = google_secret_manager_secret.jwt.id, db = google_secret_manager_secret.database_url.id }
+  secret_id = each.value
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${module.backend.service_account_email}"
+}
+
+resource "google_project_iam_member" "backend_cloudsql" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${module.backend.service_account_email}"
 }

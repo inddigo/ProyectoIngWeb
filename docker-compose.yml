@@ -1,20 +1,22 @@
-version: '3.8'
+# Levanta toda la plataforma: docker compose up --build
+# Variables: copiar .env.example a .env (hay valores por defecto solo para desarrollo).
+name: ingweb
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: pastry_postgres
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: pastry_user
-      POSTGRES_PASSWORD: pastry_password
-      POSTGRES_DB: pastry_db
+      POSTGRES_USER: ${POSTGRES_USER:-pastry_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pastry_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-pastry_db}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    networks: [backend]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pastry_user -d pastry_db"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,32 +24,34 @@ services:
   python-service:
     build:
       context: ./service-python
-      dockerfile: Dockerfile
-    container_name: pastry_python_service
-    restart: always
+    image: ingweb-python-service:latest
+    restart: unless-stopped
+    environment:
+      PORT: 8000
     ports:
       - "8000:8000"
-    environment:
-      - PORT=8000
-    healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")' || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    networks: [backend]
 
   backend:
     build:
       context: ./backend-nestjs
-      dockerfile: Dockerfile
     image: ingweb-backend-nestjs:latest
-    container_name: pastry_backend
-    restart: always
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # start.sh arma DATABASE_URL codificando la contraseña
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-pastry_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pastry_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-pastry_db}
+      PYTHON_SERVICE_URL: http://python-service:8000
+      JWT_SECRET: ${JWT_SECRET:-local-dev-jwt-secret-change-me-0123456789}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200,http://localhost:8100,http://localhost,capacitor://localhost}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
     ports:
       - "3000:3000"
-    environment:
-      - PORT=3000
-      - DATABASE_URL=postgresql://pastry_user:pastry_password@postgres:5432/pastry_db?schema=public
-      - PYTHON_SERVICE_URL=http://python-service:8000
+    networks: [backend, frontend]
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,13 +61,18 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    container_name: pastry_frontend
-    restart: always
+    image: ingweb-frontend:latest
+    restart: unless-stopped
     ports:
-      - "80:80"
+      - "${FRONTEND_PORT:-8080}:8080"
+    networks: [frontend]
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+
+networks:
+  backend:
+  frontend:
 
 volumes:
-  postgres_data:
+  pgdata:

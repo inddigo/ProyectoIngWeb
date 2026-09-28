@@ -9,7 +9,7 @@ sigue su pedido y acepta o rechaza la cotización.
 - **Definición del proyecto** (problema, usuarios, objetivos, alcance, fuente web, capacidad adaptativa): [docs/proyecto.md](docs/proyecto.md)
 - **Arquitectura** (contexto, contenedores, despliegue, modelo de datos, flujo, ADR): [docs/arquitectura.md](docs/arquitectura.md)
 - **Ambiente de staging**: [docs/staging.md](docs/staging.md)
-- **Prototipo en Figma**: _pendiente — reemplazar por el enlace del equipo_ `https://www.figma.com/...`
+- **Prototipo en Figma**:https://www.figma.com/design/u0EsbFF2IfE2B7LOor9WzQ/E1?node-id=3-90&t=yqdTvTb5aRmOolpe-1
 
 ## Arquitectura
 

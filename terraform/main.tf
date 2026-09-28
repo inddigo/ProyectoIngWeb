@@ -55,7 +55,7 @@ resource "google_secret_manager_secret" "database_url" {
 
 resource "google_secret_manager_secret_version" "database_url" {
   secret      = google_secret_manager_secret.database_url.id
-  secret_data = "postgresql://${module.database.user}:${var.db_password}@localhost/${module.database.database}?host=/cloudsql/${module.database.connection_name}"
+  secret_data = "postgresql://${module.database.user}:${urlencode(var.db_password)}@localhost/${module.database.database}?host=/cloudsql/${module.database.connection_name}"
 }
 
 # ---------- Servicios Cloud Run ----------

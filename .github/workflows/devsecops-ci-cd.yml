@@ -188,13 +188,22 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
           scanners: vuln
+      - name: Validar secretos requeridos
+        run: |
+          if [ -n "$JWT_SECRET" ] && [ ${#JWT_SECRET} -lt 32 ]; then
+            echo "::error::El secreto JWT_SECRET tiene ${#JWT_SECRET} caracteres; el backend exige al menos 32 (genera uno con: openssl rand -hex 32)"
+            exit 1
+          fi
       - name: Levantar stack completo
         run: docker compose up -d --wait --wait-timeout 180
       - name: Prueba de humo de extremo a extremo
         run: ./scripts/smoke-test.sh http://localhost:8080
       - name: Logs ante fallo
         if: failure()
-        run: docker compose logs --no-color
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail 80 backend
+          docker compose logs --no-color --tail 40
       - name: Detener stack
         if: always()
         run: docker compose down -v

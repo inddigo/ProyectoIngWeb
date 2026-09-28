@@ -1,17 +1,41 @@
 import { Routes } from '@angular/router';
-import { CustomerPortalComponent } from './features/customer-portal/customer-portal.component';
-import { LoginComponent } from './features/login/login.component';
-import { BakerDashboardComponent } from './features/baker-dashboard/baker-dashboard.component';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', component: CustomerPortalComponent },
-  { path: 'login', component: LoginComponent },
-  { 
-    path: 'dashboard', 
-    component: BakerDashboardComponent,
-    canActivate: [authGuard],
-    data: { role: 'BAKER' }
+  {
+    path: '',
+    title: 'Nuevo pedido',
+    loadComponent: () =>
+      import('./features/customer-portal/customer-portal.component').then(
+        (m) => m.CustomerPortalComponent,
+      ),
   },
-  { path: '**', redirectTo: '' }
+  {
+    path: 'login',
+    title: 'Ingresar',
+    loadComponent: () =>
+      import('./features/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'mis-pedidos',
+    title: 'Mis pedidos',
+    canActivate: [authGuard],
+    data: { role: 'CLIENT' },
+    loadComponent: () =>
+      import('./features/client-dashboard/client-dashboard.component').then(
+        (m) => m.ClientDashboardComponent,
+      ),
+  },
+  {
+    path: 'dashboard',
+    title: 'Panel profesional',
+    canActivate: [authGuard],
+    data: { role: 'BAKER' },
+    loadComponent: () =>
+      import('./features/baker-dashboard/baker-dashboard.component').then(
+        (m) => m.BakerDashboardComponent,
+      ),
+  },
+  { path: 'client-dashboard', redirectTo: 'mis-pedidos' },
+  { path: '**', redirectTo: '' },
 ];

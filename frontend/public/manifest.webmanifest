@@ -1,8 +1,8 @@
 {
-  "name": "frontend",
-  "short_name": "frontend",
-  "theme_color": "#1976d2",
-  "background_color": "#fafafa",
+  "name": "Cotiza \u2014 Pedidos personalizados",
+  "short_name": "Cotiza",
+  "theme_color": "#5b2a86",
+  "background_color": "#ffffff",
   "display": "standalone",
   "scope": "./",
   "start_url": "./",
@@ -55,5 +55,7 @@
       "type": "image/png",
       "purpose": "maskable any"
     }
-  ]
+  ],
+  "description": "Estructura pedidos personalizados con IA y cotiza con precisi\u00f3n.",
+  "lang": "es"
 }

@@ -1,27 +1,14 @@
-# Frontend
+# Frontend Angular + Ionic + Capacitor
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.21.
+Ver el [README principal](../README.md).
 
-## Development server
+```bash
+npm ci
+npm start              # http://localhost:4200 (API en http://localhost:3000)
+npm run lint
+npm run test:ci        # requiere Chrome/Chromium (CHROME_BIN)
+npm run cap:sync       # build Android + sincronización Capacitor
+```
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
-
-## Code scaffolding
-
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
-
-## Build
-
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
-
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Estructura: `src/app/core` (modelos, servicios, guards, interceptores), `src/app/shared`
+(utilidades puras: calculadora de costos, atributos), `src/app/features` (páginas con carga diferida).

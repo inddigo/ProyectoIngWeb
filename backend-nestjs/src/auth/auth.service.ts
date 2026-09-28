@@ -1,25 +1,30 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { UsersService } from '../users/users.service';
+import { RegisterDto } from './dto/register.dto';
+
+export type PublicUser = Omit<User, 'password'>;
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
-    private jwtService: JwtService
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
-    if (user && await bcrypt.compare(pass, user.password)) {
+  async validateUser(email: string, pass: string): Promise<PublicUser | null> {
+    const user = await this.usersService.findByEmail(email.toLowerCase());
+    if (user && (await bcrypt.compare(pass, user.password))) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...result } = user;
       return result;
     }
     return null;
   }
 
-  async login(user: any) {
+  login(user: Pick<User, 'id' | 'email' | 'name' | 'role'>) {
     const payload = { email: user.email, sub: user.id, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
@@ -27,23 +32,24 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
-      }
+        role: user.role,
+      },
     };
   }
 
-  async register(data: any) {
-    const existingUser = await this.usersService.findByEmail(data.email);
+  async register(data: RegisterDto) {
+    const email = data.email.toLowerCase();
+    const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
-      throw new UnauthorizedException('Email already in use');
+      throw new ConflictException('El email ya está registrado');
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(data.password, salt);
-    
+    const hashedPassword = await bcrypt.hash(data.password, 10);
     const user = await this.usersService.create({
-      ...data,
-      password: hashedPassword
+      email,
+      name: data.name,
+      role: data.role ?? 'CLIENT',
+      password: hashedPassword,
     });
 
     return this.login(user);

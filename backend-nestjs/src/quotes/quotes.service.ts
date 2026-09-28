@@ -1,85 +1,125 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClient, OrderStatus } from '@prisma/client';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { OrderStatus, Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { AuthUser } from '../common/decorators/current-user.decorator';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 
-@Injectable()
-export class QuotesService {
-  private prisma = new PrismaClient();
+export const BASE_PRICE_PER_SERVING = 3000;
+export const RESTRICTION_SURCHARGE = 5000;
+export const TATTOO_PRICE_PER_CM = 5000;
+const THEME_COMPLEXITY_MULTIPLIER: Record<string, number> = {
+  General: 1.0,
+  Personalizada: 1.2,
+  Cumpleaños: 1.3,
+  Superhéroes: 1.5,
+  Boda: 2.0,
+};
 
-  // Pricing constants (could be moved to DB or Config later)
-  private readonly BASE_PRICE_PER_SERVING = 3000;
-  private readonly THEME_COMPLEXITY_MULTIPLIER = {
-    'General': 1.0,
-    'Personalizada': 1.2,
-    'Cumpleaños': 1.3,
-    'Superhéroes': 1.5,
-    'Boda': 2.0
-  };
-  private readonly RESTRICTION_SURCHARGE = 5000; // Flat fee per restriction
+type Attributes = Record<string, unknown>;
 
-  async calculateEstimate(orderId: string) {
-    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
-    if (!order) {
-      throw new NotFoundException(`Order with ID ${orderId} not found`);
-    }
-
-    const servings = order.servings || 10;
-    const baseCost = servings * this.BASE_PRICE_PER_SERVING;
-    
-    // Find theme multiplier, fallback to 1.2 if unknown theme
-    const themeKey = Object.keys(this.THEME_COMPLEXITY_MULTIPLIER).find(k => 
-      order.theme?.toLowerCase().includes(k.toLowerCase())
-    );
-    const multiplier = themeKey ? this.THEME_COMPLEXITY_MULTIPLIER[themeKey] : 1.2;
-    
-    const themeCost = baseCost * multiplier;
-    const restrictionCost = (order.dietaryRestrictions?.length || 0) * this.RESTRICTION_SURCHARGE;
-
-    const totalEstimate = themeCost + restrictionCost;
-
+/** Estimación referencial basada en reglas por rubro (punto de partida de la calculadora). */
+export function estimatePrice(domain: string, attrs: Attributes) {
+  if (domain === 'tattoo') {
+    const sizeCm = parseInt(String(attrs['size'] ?? ''), 10) || 10;
+    const baseCost = sizeCm * TATTOO_PRICE_PER_CM;
+    const multiplier = attrs['style'] === 'A color' ? 1.5 : 1.0;
     return {
-      orderId: order.id,
-      breakdown: {
-        servingsCost: baseCost,
-        themeMultiplier: multiplier,
-        themeCost: themeCost,
-        restrictionsCost: restrictionCost
-      },
-      suggestedTotal: Math.round(totalEstimate)
+      breakdown: { baseCost, multiplier },
+      suggestedTotal: Math.round(baseCost * multiplier),
     };
   }
 
-  async createQuote(createQuoteDto: CreateQuoteDto) {
-    const { orderId, estimatedPrice, details } = createQuoteDto;
+  const servings = Number(attrs['servings']) || 10;
+  const baseCost = servings * BASE_PRICE_PER_SERVING;
+  const theme = String(attrs['theme'] ?? '').toLowerCase();
+  const themeKey = Object.keys(THEME_COMPLEXITY_MULTIPLIER).find((k) =>
+    theme.includes(k.toLowerCase()),
+  );
+  const multiplier = themeKey ? THEME_COMPLEXITY_MULTIPLIER[themeKey] : 1.2;
+  const themeCost = baseCost * multiplier;
+  const restrictions = Array.isArray(attrs['dietary_restrictions'])
+    ? attrs['dietary_restrictions']
+    : [];
+  const restrictionsCost = restrictions.length * RESTRICTION_SURCHARGE;
 
-    // Check if order exists and is ready to be quoted
-    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+  return {
+    breakdown: {
+      servingsCost: baseCost,
+      themeMultiplier: multiplier,
+      themeCost,
+      restrictionsCost,
+    },
+    suggestedTotal: Math.round(themeCost + restrictionsCost),
+  };
+}
+
+@Injectable()
+export class QuotesService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async calculateEstimate(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
     if (!order) {
-      throw new NotFoundException(`Order with ID ${orderId} not found`);
+      throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
+    }
+    return {
+      orderId: order.id,
+      ...estimatePrice(order.domain, (order.attributes ?? {}) as Attributes),
+    };
+  }
+
+  async createQuote(dto: CreateQuoteDto) {
+    const { orderId, estimatedPrice, details, breakdown } = dto;
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order) {
+      throw new NotFoundException(`Pedido con ID ${orderId} no encontrado`);
+    }
+    if (order.status !== OrderStatus.CONFIRMED_BY_CLIENT) {
+      throw new ConflictException(
+        `El pedido está en estado ${order.status} y no admite una nueva cotización`,
+      );
     }
 
-    // Wrap in transaction: Create Quote + Update Order Status
+    // Transacción: crear cotización + actualizar estado del pedido
     return this.prisma.$transaction(async (tx) => {
       const quote = await tx.quote.create({
         data: {
           orderId,
           estimatedPrice,
-          details
-        }
+          details,
+          breakdown: breakdown as Prisma.InputJsonValue | undefined,
+        },
       });
-
       await tx.order.update({
         where: { id: orderId },
-        data: { status: OrderStatus.QUOTED }
+        data: { status: OrderStatus.QUOTED },
       });
-
       return quote;
     });
   }
 
-  async getQuoteByOrderId(orderId: string) {
-    const quote = await this.prisma.quote.findUnique({ where: { orderId } });
-    if (!quote) throw new NotFoundException('Quote not found');
-    return quote;
+  async getQuoteByOrderId(orderId: string, user: AuthUser) {
+    const quote = await this.prisma.quote.findUnique({
+      where: { orderId },
+      include: { order: { select: { clientId: true } } },
+    });
+    if (
+      !quote ||
+      (user.role === 'CLIENT' && quote.order.clientId !== user.userId)
+    ) {
+      throw new NotFoundException('Cotización no encontrada');
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { order, ...rest } = quote;
+    return rest;
   }
 }

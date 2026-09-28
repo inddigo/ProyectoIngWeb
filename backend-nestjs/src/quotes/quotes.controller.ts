@@ -1,34 +1,44 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { QuotesService } from './quotes.service';
 import { CreateQuoteDto } from './dto/create-quote.dto';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-
-// Use AuthGuard('jwt') directly if JwtAuthGuard wrapper is not defined yet
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import {
+  AuthUser,
+  CurrentUser,
+} from '../common/decorators/current-user.decorator';
 
 @Controller('api/v1/quotes')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class QuotesController {
   constructor(private readonly quotesService: QuotesService) {}
 
   @Get('calculate/:orderId')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('BAKER')
-  async calculate(@Param('orderId') orderId: string) {
+  calculate(@Param('orderId', ParseUUIDPipe) orderId: string) {
     return this.quotesService.calculateEstimate(orderId);
   }
 
   @Post()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('BAKER')
-  async createQuote(@Body() createQuoteDto: CreateQuoteDto) {
-    return this.quotesService.createQuote(createQuoteDto);
+  createQuote(@Body() dto: CreateQuoteDto) {
+    return this.quotesService.createQuote(dto);
   }
 
   @Get('order/:orderId')
-  @UseGuards(AuthGuard('jwt'))
-  async getQuote(@Param('orderId') orderId: string) {
-    // Both CLIENT and BAKER can view the final quote
-    return this.quotesService.getQuoteByOrderId(orderId);
+  getQuote(
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.quotesService.getQuoteByOrderId(orderId, user);
   }
 }

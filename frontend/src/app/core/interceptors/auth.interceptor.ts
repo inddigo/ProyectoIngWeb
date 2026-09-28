@@ -2,16 +2,13 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 
+/** Adjunta el JWT a las peticiones hacia la API. */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const authService = inject(AuthService);
-  const token = authService.getToken();
-
-  if (token) {
-    const cloned = req.clone({
-      headers: req.headers.set('Authorization', `Bearer ${token}`)
-    });
-    return next(cloned);
+  const token = inject(AuthService).getToken();
+  if (!token) {
+    return next(req);
   }
-
-  return next(req);
+  return next(
+    req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) }),
+  );
 };

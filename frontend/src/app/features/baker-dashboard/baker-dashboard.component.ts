@@ -1,161 +1,542 @@
-import { Component, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../core/services/auth.service';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import {
+  FormArray,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
+import {
+  IonBadge,
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardSubtitle,
+  IonCardTitle,
+  IonChip,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonModal,
+  IonNote,
+  IonRefresher,
+  IonRefresherContent,
+  IonRow,
+  IonSegment,
+  IonSegmentButton,
+  IonSelect,
+  IonSelectOption,
+  IonSkeletonText,
+  IonText,
+  IonTextarea,
+  IonTitle,
+  IonToolbar,
+  RefresherCustomEvent,
+} from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import {
+  addOutline,
+  calculatorOutline,
+  closeOutline,
+  logOutOutline,
+  sendOutline,
+  trashOutline,
+  flashOutline,
+} from 'ionicons/icons';
+import { AuthService } from '../../core/services/auth.service';
+import { OrderService } from '../../core/services/order.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { apiErrorMessage } from '../../core/interceptors/error.interceptor';
+import {
+  DOMAIN_LABELS,
+  Order,
+  OrderStatus,
+  STATUS_COLORS,
+  STATUS_LABELS,
+} from '../../core/models/order.model';
+import {
+  attributeEntries,
+  attributeLabel,
+  formatAttribute,
+} from '../../shared/attributes';
+import {
+  CostItem,
+  CostSummary,
+  defaultItems,
+  itemCost,
+  summarizeCosts,
+} from '../../shared/cost-calculator';
 
-interface Order {
-  id: string;
-  status: string;
-  theme: string;
-  servings: number;
-  flavors: string[];
-  dietaryRestrictions: string[];
-}
+type Filter = OrderStatus | 'ALL';
 
 @Component({
   selector: 'app-baker-dashboard',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    ReactiveFormsModule,
+    CurrencyPipe,
+    DatePipe,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
+    IonButton,
+    IonIcon,
+    IonContent,
+    IonRefresher,
+    IonRefresherContent,
+    IonSegment,
+    IonSegmentButton,
+    IonLabel,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardSubtitle,
+    IonCardContent,
+    IonBadge,
+    IonChip,
+    IonText,
+    IonNote,
+    IonSkeletonText,
+    IonModal,
+    IonList,
+    IonItem,
+    IonInput,
+    IonTextarea,
+    IonSelect,
+    IonSelectOption,
+  ],
+  styles: `
+    .reference-img {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .summary p {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+    }
+    .summary .total {
+      font-size: 1.2rem;
+      color: var(--ion-color-success-shade);
+    }
+    .ingredient-row {
+      border-bottom: 1px solid var(--ion-color-light-shade);
+      align-items: center;
+    }
+  `,
   template: `
-    <div style="font-family: system-ui, sans-serif; max-width: 1000px; margin: 0 auto; padding: 2rem;">
-      <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem;">
-        <h1 style="color: #4a148c; margin: 0;">👨‍🍳 Portal del Pastelero</h1>
-        <button (click)="logout()" style="background: #e0e0e0; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">Cerrar Sesión</button>
-      </header>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Panel del profesional</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="logout()">
+            <ion-icon slot="start" name="log-out-outline"></ion-icon>
+            <span class="ion-hide-sm-down">Salir</span>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+      <ion-toolbar>
+        <ion-segment [value]="filter()" (ionChange)="setFilter($any($event.detail.value))" [scrollable]="true">
+          <ion-segment-button value="CONFIRMED_BY_CLIENT"><ion-label>Por cotizar</ion-label></ion-segment-button>
+          <ion-segment-button value="QUOTED"><ion-label>Cotizados</ion-label></ion-segment-button>
+          <ion-segment-button value="ACCEPTED_BY_CLIENT"><ion-label>Aceptados</ion-label></ion-segment-button>
+          <ion-segment-button value="ALL"><ion-label>Todos</ion-label></ion-segment-button>
+        </ion-segment>
+      </ion-toolbar>
+    </ion-header>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-        
-        <!-- Tarjeta de Pedido -->
-        <div *ngFor="let order of orders()" style="border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); background: white;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-            <span style="font-weight: bold; color: #333;">Pedido #{{ order.id }}</span>
-            <span style="background: #e3f2fd; color: #1565c0; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">
-              {{ order.status }}
-            </span>
+    <ion-content class="ion-padding">
+      <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+        <ion-refresher-content></ion-refresher-content>
+      </ion-refresher>
+
+      <div class="page-container">
+        @if (loading() && !orders().length) {
+          <ion-card><ion-card-content>
+            <ion-skeleton-text [animated]="true" style="width: 50%"></ion-skeleton-text>
+            <ion-skeleton-text [animated]="true" style="width: 80%"></ion-skeleton-text>
+          </ion-card-content></ion-card>
+        } @else if (!orders().length) {
+          <div class="empty-state">
+            <p>No hay pedidos en esta categoría.</p>
+            <p>Los pedidos confirmados por los clientes aparecerán en "Por cotizar".</p>
           </div>
-          
-          <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; color: #555; font-size: 0.9rem;">
-            <li style="margin-bottom: 0.5rem;"><strong>Temática:</strong> {{ order.theme }}</li>
-            <li style="margin-bottom: 0.5rem;"><strong>Porciones:</strong> {{ order.servings }}</li>
-            <li style="margin-bottom: 0.5rem;"><strong>Sabores:</strong> {{ order.flavors.join(', ') }}</li>
-            <li *ngIf="order.dietaryRestrictions.length" style="color: #d32f2f;">
-              <strong>⚠️ Restricciones:</strong> {{ order.dietaryRestrictions.join(', ') }}
-            </li>
-          </ul>
+        }
 
-          <button *ngIf="activeQuoteOrderId() !== order.id" (click)="openQuoteCalculator(order)" style="width: 100%; background: #4a148c; color: white; border: none; padding: 0.75rem; border-radius: 6px; font-weight: bold; cursor: pointer;">
-            Calcular Cotización
-          </button>
-
-          <!-- Calculadora Expandible -->
-          <div *ngIf="activeQuoteOrderId() === order.id" style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem;">
-            <h4 style="margin: 0 0 1rem 0; color: #333;">Calculadora de Costos</h4>
-            
-            <div style="background: #f5f5f5; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem;">
-               <p style="margin:0 0 0.5rem 0; display:flex; justify-content: space-between;">
-                 <span>Costo Base (x{{order.servings}}):</span>
-                 <strong>$ {{ calculatedBaseCost() | number }}</strong>
-               </p>
-               <p style="margin:0 0 0.5rem 0; display:flex; justify-content: space-between;">
-                 <span>Complejidad Temática:</span>
-                 <strong>+ $ {{ calculatedThemeCost() | number }}</strong>
-               </p>
-               <p style="margin:0; display:flex; justify-content: space-between; color: #d32f2f;">
-                 <span>Restricciones Especiales:</span>
-                 <strong>+ $ {{ calculatedRestrictionsCost() | number }}</strong>
-               </p>
-               <hr style="border: 0; border-top: 1px solid #ddd; margin: 0.5rem 0;">
-               <p style="margin:0; display:flex; justify-content: space-between; font-size: 1.1rem; color: #2e7d32;">
-                 <span><strong>Total Sugerido:</strong></span>
-                 <strong>$ {{ suggestedTotal() | number }}</strong>
-               </p>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <label style="font-weight: bold; font-size: 0.9rem;">Precio Final a Cotizar ($):</label>
-              <input type="number" [(ngModel)]="finalPrice" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
-              
-              <label style="font-weight: bold; font-size: 0.9rem;">Detalles / Notas para el cliente:</label>
-              <textarea [(ngModel)]="quoteDetails" rows="2" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"></textarea>
-            </div>
-
-            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-              <button (click)="submitQuote(order)" style="flex: 1; background: #2e7d32; color: white; border: none; padding: 0.75rem; border-radius: 6px; font-weight: bold; cursor: pointer;">
-                Enviar Cotización
-              </button>
-              <button (click)="cancelQuote()" style="background: #e0e0e0; color: #333; border: none; padding: 0.75rem; border-radius: 6px; cursor: pointer;">
-                Cancelar
-              </button>
-            </div>
-          </div>
-
-        </div>
+        <ion-grid>
+          <ion-row>
+            @for (order of orders(); track order.id) {
+              <ion-col size="12" sizeMd="6">
+                <ion-card>
+                  <ion-card-header>
+                    <ion-card-subtitle>
+                      {{ domainLabels[order.domain] || order.domain }} · {{ order.createdAt | date: 'short' }}
+                    </ion-card-subtitle>
+                    <ion-card-title>Pedido #{{ order.id.slice(0, 8) }}</ion-card-title>
+                    <div>
+                      <ion-badge [color]="statusColors[order.status]">{{ statusLabels[order.status] }}</ion-badge>
+                      @if (order.confidenceScore !== null && order.confidenceScore !== undefined) {
+                        <ion-note> · Confianza IA {{ (order.confidenceScore * 100).toFixed(0) }}%</ion-note>
+                      }
+                    </div>
+                  </ion-card-header>
+                  <ion-card-content>
+                    <p class="muted">"{{ order.rawText }}"</p>
+                    <div class="attr-chips">
+                      @for (entry of entries(order); track entry[0]) {
+                        <ion-chip [outline]="true">{{ label(entry[0]) }}: {{ format(entry[1]) }}</ion-chip>
+                      }
+                    </div>
+                    @if (order.imageUrl) {
+                      <p><strong>Imagen de referencia del cliente:</strong></p>
+                      <img class="reference-img" [src]="order.imageUrl" alt="Referencia del cliente" loading="lazy" />
+                    }
+                    @if (order.webReferences.length) {
+                      <p><strong>Referencias web:</strong></p>
+                      <div class="references">
+                        @for (ref of order.webReferences; track ref.imageUrl) {
+                          <figure>
+                            <img [src]="ref.imageUrl" [alt]="ref.title" loading="lazy" />
+                            <figcaption>{{ ref.title }}</figcaption>
+                          </figure>
+                        }
+                      </div>
+                    }
+                    @if (order.quote) {
+                      <p class="ion-margin-top">
+                        Cotizado en <strong>{{ +order.quote.estimatedPrice | currency: 'CLP' : 'symbol-narrow' : '1.0-0' }}</strong>
+                      </p>
+                    }
+                    @if (order.status === 'CONFIRMED_BY_CLIENT') {
+                      <ion-button expand="block" class="ion-margin-top" (click)="openCalculator(order)">
+                        <ion-icon slot="start" name="calculator-outline"></ion-icon>
+                        Cotizar con calculadora de costos
+                      </ion-button>
+                    }
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+            }
+          </ion-row>
+        </ion-grid>
       </div>
-    </div>
-  `
+
+      <!-- Calculadora de costos: pantalla completa en móvil, diálogo en escritorio -->
+      <ion-modal [isOpen]="!!activeOrder()" (didDismiss)="closeCalculator()">
+        <ng-template>
+          <ion-header>
+            <ion-toolbar color="primary">
+              <ion-title>Cotizar pedido #{{ activeOrder()?.id?.slice(0, 8) }}</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="closeCalculator()" aria-label="Cerrar">
+                  <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+                </ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+          <ion-content class="ion-padding">
+            <form [formGroup]="calcForm" (ngSubmit)="submitQuote()">
+              <h3>Insumos</h3>
+              <ion-grid formArrayName="items" class="ion-no-padding">
+                @for (group of itemsArray.controls; track group; let i = $index) {
+                  <ion-row class="ingredient-row" [formGroupName]="i">
+                    <ion-col size="12" sizeMd="3">
+                      <ion-input formControlName="name" label="Insumo" labelPlacement="stacked"></ion-input>
+                    </ion-col>
+                    <ion-col size="6" sizeMd="2">
+                      <ion-input formControlName="packageCost" type="number" inputmode="decimal" label="Costo presentación" labelPlacement="stacked"></ion-input>
+                    </ion-col>
+                    <ion-col size="6" sizeMd="2">
+                      <ion-input formControlName="packageQuantity" type="number" inputmode="decimal" label="Cant. presentación" labelPlacement="stacked"></ion-input>
+                    </ion-col>
+                    <ion-col size="4" sizeMd="1">
+                      <ion-select formControlName="unit" label="Unidad" labelPlacement="stacked" interface="popover">
+                        @for (u of units; track u) {
+                          <ion-select-option [value]="u">{{ u }}</ion-select-option>
+                        }
+                      </ion-select>
+                    </ion-col>
+                    <ion-col size="4" sizeMd="2">
+                      <ion-input formControlName="quantityUsed" type="number" inputmode="decimal" label="Cant. usada" labelPlacement="stacked"></ion-input>
+                    </ion-col>
+                    <ion-col size="3" sizeMd="1">
+                      <ion-note>{{ costOf(i) | currency: 'CLP' : 'symbol-narrow' : '1.0-0' }}</ion-note>
+                    </ion-col>
+                    <ion-col size="1">
+                      <ion-button fill="clear" color="danger" (click)="removeItem(i)" aria-label="Eliminar insumo">
+                        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                      </ion-button>
+                    </ion-col>
+                  </ion-row>
+                }
+              </ion-grid>
+              <ion-button fill="outline" size="small" (click)="addItem()">
+                <ion-icon slot="start" name="add-outline"></ion-icon>Agregar insumo
+              </ion-button>
+
+              <ion-grid>
+                <ion-row>
+                  <ion-col size="12" sizeMd="6">
+                    <ion-list lines="none">
+                      <ion-item>
+                        <ion-input formControlName="laborCost" type="number" inputmode="decimal" label="Mano de obra ($)" labelPlacement="stacked" fill="outline"></ion-input>
+                      </ion-item>
+                      <ion-item>
+                        <ion-input formControlName="fixedCosts" type="number" inputmode="decimal" label="Costos fijos / otros ($)" labelPlacement="stacked" fill="outline"></ion-input>
+                      </ion-item>
+                      <ion-item>
+                        <ion-input formControlName="profitMargin" type="number" inputmode="decimal" label="Margen de ganancia (%)" labelPlacement="stacked" fill="outline"></ion-input>
+                      </ion-item>
+                    </ion-list>
+                  </ion-col>
+                  <ion-col size="12" sizeMd="6">
+                    <ion-card class="summary">
+                      <ion-card-content>
+                        <p><span>Costo insumos</span><strong>{{ summary().ingredientsCost | currency: 'CLP' : 'symbol-narrow' : '1.0-0' }}</strong></p>
+                        <p><span>Costo total</span><strong>{{ summary().totalCost | currency: 'CLP' : 'symbol-narrow' : '1.0-0' }}</strong></p>
+                        <p><span>Ganancia</span><strong>{{ summary().profit | currency: 'CLP' : 'symbol-narrow' : '1.0-0' }}</strong></p>
+                        <p class="total"><span>Precio sugerido</span><strong>{{ summary().suggestedPrice | currency: 'CLP' : 'symbol-narrow' : '1.0-0' }}</strong></p>
+                        @if (ruleEstimate() !== null) {
+                          <ion-text color="medium">
+                            <p><span>Estimación por reglas</span><span>{{ ruleEstimate() | currency: 'CLP' : 'symbol-narrow' : '1.0-0' }}</span></p>
+                          </ion-text>
+                        }
+                        <ion-button size="small" fill="clear" (click)="useSuggested()">Usar precio sugerido</ion-button>
+                        <ion-button size="small" fill="clear" (click)="loadRuleEstimate()">
+                          <ion-icon slot="start" name="flash-outline"></ion-icon>Estimación por reglas
+                        </ion-button>
+                      </ion-card-content>
+                    </ion-card>
+                  </ion-col>
+                </ion-row>
+              </ion-grid>
+
+              <ion-list lines="none">
+                <ion-item>
+                  <ion-input formControlName="finalPrice" type="number" inputmode="numeric" label="Precio final a cotizar ($)" labelPlacement="stacked" fill="outline" errorText="Ingresa un precio mayor a 0"></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-textarea formControlName="details" label="Detalle para el cliente" labelPlacement="stacked" fill="outline" [autoGrow]="true" errorText="Agrega un detalle para el cliente"></ion-textarea>
+                </ion-item>
+              </ion-list>
+
+              <ion-button type="submit" expand="block" color="success" [disabled]="submitting()">
+                <ion-icon slot="start" name="send-outline"></ion-icon>
+                {{ submitting() ? 'Enviando...' : 'Enviar cotización' }}
+              </ion-button>
+            </form>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+    </ion-content>
+  `,
 })
 export class BakerDashboardComponent implements OnInit {
-  orders = signal<Order[]>([]);
-  
-  activeQuoteOrderId = signal<string | null>(null);
-  calculatedBaseCost = signal<number>(0);
-  calculatedThemeCost = signal<number>(0);
-  calculatedRestrictionsCost = signal<number>(0);
-  suggestedTotal = signal<number>(0);
+  private readonly auth = inject(AuthService);
+  private readonly orderService = inject(OrderService);
+  private readonly notify = inject(NotificationService);
+  private readonly router = inject(Router);
+  private readonly fb = inject(NonNullableFormBuilder);
 
-  finalPrice = 0;
-  quoteDetails = '';
+  readonly orders = signal<Order[]>([]);
+  readonly loading = signal(false);
+  readonly submitting = signal(false);
+  readonly filter = signal<Filter>('CONFIRMED_BY_CLIENT');
+  readonly activeOrder = signal<Order | null>(null);
+  readonly ruleEstimate = signal<number | null>(null);
+  private readonly costInputs = signal<CostItem[]>([]);
+  private readonly extras = signal({ laborCost: 0, fixedCosts: 0, profitMargin: 30 });
 
-  constructor(private authService: AuthService, private router: Router) {}
+  readonly summary = computed<CostSummary>(() =>
+    summarizeCosts({ items: this.costInputs(), ...this.extras() }),
+  );
 
-  ngOnInit() {
-    this.orders.set([
-      { id: 'ORD-1029', status: 'CONFIRMED_BY_CLIENT', theme: 'Superhéroes', servings: 20, flavors: ['Chocolate', 'Manjar'], dietaryRestrictions: [] },
-      { id: 'ORD-1030', status: 'CONFIRMED_BY_CLIENT', theme: 'Boda', servings: 50, flavors: ['Vainilla'], dietaryRestrictions: ['Sin Lactosa', 'Vegana'] }
-    ]);
+  readonly units = ['g', 'kg', 'ml', 'L', 'u', 'h'];
+  readonly domainLabels = DOMAIN_LABELS;
+  readonly statusLabels = STATUS_LABELS;
+  readonly statusColors = STATUS_COLORS;
+  readonly label = attributeLabel;
+  readonly format = formatAttribute;
+  readonly entries = (order: Order) => attributeEntries(order.attributes);
+
+  readonly calcForm = this.fb.group({
+    items: this.fb.array<FormGroup>([]),
+    laborCost: [0, Validators.min(0)],
+    fixedCosts: [0, Validators.min(0)],
+    profitMargin: [30, [Validators.min(0), Validators.max(500)]],
+    finalPrice: [0, [Validators.required, Validators.min(1)]],
+    details: ['', [Validators.required, Validators.maxLength(2000)]],
+  });
+
+  get itemsArray(): FormArray<FormGroup> {
+    return this.calcForm.controls.items;
   }
 
-  openQuoteCalculator(order: Order) {
-    this.activeQuoteOrderId.set(order.id);
-    
-    // Simulate HTTP Call to GET /api/v1/quotes/calculate/:orderId
-    const base = order.servings * 3000;
-    const themeMulti = order.theme === 'Boda' ? 2.0 : (order.theme === 'Superhéroes' ? 1.5 : 1.2);
-    const themeC = base * themeMulti - base; // Extra cost
-    const restrict = order.dietaryRestrictions.length * 5000;
-
-    this.calculatedBaseCost.set(base);
-    this.calculatedThemeCost.set(themeC);
-    this.calculatedRestrictionsCost.set(restrict);
-    
-    const total = base + themeC + restrict;
-    this.suggestedTotal.set(total);
-    this.finalPrice = total; // Pre-fill with suggestion
-    this.quoteDetails = `Cotización estandarizada para pastel de ${order.servings} porciones. Incluye diseño de ${order.theme}.`;
+  ngOnInit(): void {
+    this.calcForm.valueChanges.subscribe(() => this.syncCostInputs());
+    this.load();
   }
 
-  cancelQuote() {
-    this.activeQuoteOrderId.set(null);
+  setFilter(filter: Filter): void {
+    this.filter.set(filter);
+    this.load();
   }
 
-  submitQuote(order: Order) {
-    // Simulate HTTP Call to POST /api/v1/quotes
-    console.log('Cotización enviada:', {
-      orderId: order.id,
-      estimatedPrice: this.finalPrice,
-      details: this.quoteDetails
+  load(done?: () => void): void {
+    const f = this.filter();
+    this.loading.set(true);
+    this.orderService.getOrders(f === 'ALL' ? undefined : f).subscribe({
+      next: (orders) => {
+        this.orders.set(orders);
+        this.loading.set(false);
+        done?.();
+      },
+      error: () => {
+        this.loading.set(false);
+        done?.();
+      },
     });
-    
-    // Optimistic UI Update
-    const updatedOrders = this.orders().filter(o => o.id !== order.id);
-    this.orders.set(updatedOrders);
-    this.activeQuoteOrderId.set(null);
-    alert('Cotización enviada exitosamente al cliente.');
   }
 
-  logout() {
-    this.authService.logout();
+  refresh(event: RefresherCustomEvent): void {
+    this.load(() => event.target.complete());
+  }
+
+  openCalculator(order: Order): void {
+    const attrs = order.attributes ?? {};
+    const quantity = parseInt(String(attrs['servings'] ?? attrs['size'] ?? '10'), 10) || 10;
+
+    this.itemsArray.clear({ emitEvent: false });
+    for (const item of defaultItems(order.domain, quantity)) {
+      this.itemsArray.push(this.itemGroup(item), { emitEvent: false });
+    }
+    const design = attrs['theme'] ?? attrs['style'] ?? 'personalizado';
+    this.calcForm.patchValue({
+      laborCost: order.domain === 'tattoo' ? 15000 * Math.ceil(quantity / 5) : 5000 + quantity * 100,
+      fixedCosts: 2000,
+      profitMargin: 30,
+      details: `Cotización para ${DOMAIN_LABELS[order.domain] ?? order.domain}. Diseño: ${design}.`,
+    });
+    this.ruleEstimate.set(null);
+    this.syncCostInputs();
+    this.useSuggested();
+    this.activeOrder.set(order);
+  }
+
+  closeCalculator(): void {
+    this.activeOrder.set(null);
+  }
+
+  addItem(): void {
+    this.itemsArray.push(
+      this.itemGroup({ name: '', packageCost: 0, packageQuantity: 1, unit: 'u', quantityUsed: 0 }),
+    );
+  }
+
+  removeItem(index: number): void {
+    this.itemsArray.removeAt(index);
+  }
+
+  costOf(index: number): number {
+    return itemCost(this.costInputs()[index] ?? ({} as CostItem));
+  }
+
+  useSuggested(): void {
+    this.calcForm.controls.finalPrice.setValue(Math.ceil(this.summary().suggestedPrice));
+  }
+
+  loadRuleEstimate(): void {
+    const order = this.activeOrder();
+    if (!order) return;
+    this.orderService.estimateQuote(order.id).subscribe({
+      next: (res) => this.ruleEstimate.set(res.suggestedTotal),
+      error: (err) => this.notify.show(apiErrorMessage(err, 'No se pudo calcular la estimación'), 'danger'),
+    });
+  }
+
+  submitQuote(): void {
+    const order = this.activeOrder();
+    if (!order) return;
+    if (this.calcForm.invalid) {
+      this.calcForm.markAllAsTouched();
+      return;
+    }
+    const value = this.calcForm.getRawValue();
+    this.submitting.set(true);
+    this.orderService
+      .submitQuote({
+        orderId: order.id,
+        estimatedPrice: Number(value.finalPrice),
+        details: value.details,
+        breakdown: {
+          items: this.costInputs(),
+          laborCost: Number(value.laborCost),
+          fixedCosts: Number(value.fixedCosts),
+          profitMargin: Number(value.profitMargin),
+          ...this.summary(),
+        },
+      })
+      .subscribe({
+        next: () => {
+          this.submitting.set(false);
+          this.activeOrder.set(null);
+          this.orders.update((list) => list.filter((o) => o.id !== order.id));
+          this.notify.show('Cotización enviada al cliente', 'success');
+        },
+        error: (err) => {
+          this.submitting.set(false);
+          this.notify.show(apiErrorMessage(err, 'No se pudo enviar la cotización'), 'danger');
+        },
+      });
+  }
+
+  logout(): void {
+    this.auth.logout();
     this.router.navigate(['/login']);
   }
+
+  private itemGroup(item: CostItem): FormGroup {
+    return this.fb.group({
+      name: [item.name],
+      packageCost: [item.packageCost, Validators.min(0)],
+      packageQuantity: [item.packageQuantity, Validators.min(0)],
+      unit: [item.unit],
+      quantityUsed: [item.quantityUsed, Validators.min(0)],
+    });
+  }
+
+  private syncCostInputs(): void {
+    const v = this.calcForm.getRawValue();
+    this.costInputs.set(v.items as CostItem[]);
+    this.extras.set({
+      laborCost: Number(v.laborCost),
+      fixedCosts: Number(v.fixedCosts),
+      profitMargin: Number(v.profitMargin),
+    });
+  }
 }
+
+addIcons({
+  addOutline,
+  calculatorOutline,
+  closeOutline,
+  logOutOutline,
+  sendOutline,
+  trashOutline,
+  flashOutline,
+});

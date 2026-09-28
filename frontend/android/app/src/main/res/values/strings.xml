@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cotiza</string>
+    <string name="title_activity_main">Cotiza</string>
+    <string name="package_name">cl.ingweb.cotiza</string>
+    <string name="custom_url_scheme">cl.ingweb.cotiza</string>
+</resources>

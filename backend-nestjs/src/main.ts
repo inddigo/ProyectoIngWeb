@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { CorrelationLoggingInterceptor } from './common/interceptors/correlation-logging.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -9,7 +10,12 @@ async function bootstrap() {
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
-  app.enableCors({ origin: origins });
+  app.enableCors({
+    origin: origins,
+    exposedHeaders: ['X-Correlation-Id'],
+  });
+
+  app.useGlobalInterceptors(new CorrelationLoggingInterceptor());
 
   // Validación global de DTOs: rechaza campos no declarados y convierte tipos.
   app.useGlobalPipes(
@@ -26,3 +32,4 @@ async function bootstrap() {
   Logger.log(`Backend escuchando en el puerto ${port}`, 'Bootstrap');
 }
 bootstrap();
+

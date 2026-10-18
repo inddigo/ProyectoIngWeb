@@ -1,6 +1,7 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NlpService } from '../nlp/nlp.service';
+import { getCurrentCorrelationId } from '../common/interceptors/correlation-logging.interceptor';
 
 @Controller('health')
 export class HealthController {
@@ -15,18 +16,29 @@ export class HealthController {
    */
   @Get()
   async check() {
+    const start = Date.now();
     let database: 'up' | 'down' = 'up';
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch {
       database = 'down';
     }
+    const dbLatencyMs = Date.now() - start;
+
+    const nlpStart = Date.now();
     const pythonService = (await this.nlpService.isHealthy()) ? 'up' : 'down';
+    const nlpLatencyMs = Date.now() - nlpStart;
 
     const body = {
       status: database === 'up' ? 'ok' : 'error',
       timestamp: new Date().toISOString(),
+      correlationId: getCurrentCorrelationId(),
       services: { nestjs: 'up', database, pythonService },
+      metrics: {
+        dbLatencyMs,
+        nlpLatencyMs,
+        totalCheckMs: Date.now() - start,
+      },
     };
 
     if (database === 'down') {
@@ -35,3 +47,4 @@ export class HealthController {
     return body;
   }
 }
+

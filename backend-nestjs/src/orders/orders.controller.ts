@@ -12,7 +12,10 @@ import {
 import { OrdersService } from './orders.service';
 import { NlpService } from '../nlp/nlp.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { ListOrdersQuery } from './dto/list-orders.query';
+import {
+  ListOrdersQuery,
+  SearchWebReferencesQuery,
+} from './dto/list-orders.query';
 import { OrderDecisionDto } from './dto/order-decision.dto';
 import { StructureOrderDto } from '../nlp/dto/structure-order.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -34,6 +37,19 @@ export class OrdersController {
   @Post('nlp-structure')
   structure(@Body() dto: StructureOrderDto) {
     return this.nlpService.structureOrder(dto.rawText, dto.domain);
+  }
+
+  /** Público: métricas de calidad de extracción web y benchmark NLP (NestJS -> FastAPI). */
+  @Get('nlp-metrics')
+  getNlpMetrics() {
+    return this.nlpService.getMetrics();
+  }
+
+  /** Consulta referencias visuales indexadas en PostgreSQL con metadatos de procedencia. */
+  @Get('web-references')
+  @UseGuards(JwtAuthGuard)
+  searchWebReferences(@Query() query: SearchWebReferencesQuery) {
+    return this.ordersService.searchWebReferences(query);
   }
 
   @Post()

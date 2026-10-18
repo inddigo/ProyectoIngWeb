@@ -66,16 +66,17 @@ sequenceDiagram
 
     C->>FE: "Torta vegana para 20 personas temática Batman"
     FE->>BE: POST /api/v1/orders/nlp-structure {rawText, domain}
-    BE->>BE: ValidationPipe (DTO)
-    BE->>PY: POST /api/v1/nlp/structure-order {raw_text, domain}
+    BE->>BE: ValidationPipe (DTO) + X-Correlation-Id
+    BE->>PY: POST /api/v1/nlp/structure-order (retry=1, timeout=10s)
     PY->>PY: spaCy + reglas → entidades + confianza
-    PY->>OV: GET /v1/images?q=batman cake
-    OV-->>PY: imágenes CC
-    PY-->>BE: {entities, web_references}
-    BE-->>FE: formulario estructurado
+    PY->>OV: GET /v1/images?q=batman cake (User-Agent + TTL cache)
+    OV-->>PY: lote crudo de imágenes CC
+    PY->>PY: Validación HTTPS + limpieza HTML/Unicode + deduplicación
+    PY-->>BE: {entities, web_references, extraction_meta}
+    BE-->>FE: formulario estructurado + métricas de extracción
     C->>FE: corrige y confirma (requiere sesión CLIENT)
     FE->>BE: POST /api/v1/orders (JWT)
-    BE->>DB: INSERT order (CONFIRMED_BY_CLIENT) + web_references
+    BE->>DB: INSERT order (CONFIRMED_BY_CLIENT) + web_references (deduplicadas)
     P->>FE: abre panel "Por cotizar"
     FE->>BE: GET /api/v1/orders?status=CONFIRMED_BY_CLIENT (JWT BAKER)
     P->>FE: calculadora de costos → precio final
@@ -86,10 +87,10 @@ sequenceDiagram
     BE->>DB: UPDATE order (solo dueño, solo si QUOTED)
 ```
 
-Si FastAPI no responde, NestJS responde con `fallback: true` y el cliente completa los campos
-manualmente; `/health` reporta `pythonService: down` sin marcar la API como caída.
+Si FastAPI no responde tras el reintento acotado, NestJS responde con `fallback: true` y el cliente completa los campos
+manualmente; `/health` reporta `pythonService: down` y las latencias de diagnóstico (`dbLatencyMs`, `nlpLatencyMs`) sin marcar la API como caída.
 
-## 4. Modelo de datos inicial
+## 4. Modelo de datos e indexación (EP1 + EP2)
 
 ```mermaid
 erDiagram
@@ -120,8 +121,14 @@ erDiagram
         uuid id PK
         uuid order_id FK
         text title
-        text image_url
-        text source
+        text image_url "UK (order_id, image_url)"
+        text source "IDX"
+        text source_url
+        text license
+        text creator
+        text query_used "IDX"
+        timestamp retrieved_at
+        timestamp created_at
     }
     quotes {
         uuid id PK
@@ -132,7 +139,9 @@ erDiagram
     }
 ```
 
-Migración inicial: `backend-nestjs/prisma/migrations/20260928000000_init/migration.sql`.
+Migraciones versionadas:
+- `backend-nestjs/prisma/migrations/20260928000000_init/migration.sql` (EP1).
+- `backend-nestjs/prisma/migrations/20261018000000_ep2_web_references_metadata/migration.sql` (EP2: metadatos de procedencia, restricción única compuesta e índices de consulta).
 
 ### Ciclo de vida del pedido
 
@@ -182,3 +191,5 @@ Definido en [`terraform/`](../terraform). Ver [staging.md](staging.md).
 | [003](ADR/003-frontend-ionic-capacitor.md) | Angular + Ionic standalone + Capacitor para web, PWA y Android |
 | [004](ADR/004-seguridad-roles-y-degradacion.md) | Autorización por roles y degradación controlada del NLP |
 | [005](ADR/005-pipeline-devsecops.md) | Pipeline DevSecOps con quality gates bloqueantes |
+| [006](ADR/006-recuperacion-web-y-calidad-ep2.md) | Pipeline de recuperación, limpieza, deduplicación, indexación y métricas web (EP2) |
+

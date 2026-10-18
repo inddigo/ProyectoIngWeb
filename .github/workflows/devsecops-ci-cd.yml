@@ -2,10 +2,10 @@ name: DevSecOps CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop, ep2-integracion-web]
+    branches: [main, develop]
     tags: ['v*']
   pull_request:
-    branches: [main, develop, ep2-integracion-web]
+    branches: [main, develop]
   workflow_dispatch:
 
 # Mínimo privilegio: el token de GitHub solo puede leer el repositorio.

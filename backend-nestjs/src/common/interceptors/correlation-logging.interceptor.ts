@@ -18,6 +18,17 @@ export function getCurrentCorrelationId(): string | undefined {
   return correlationStorage.getStore()?.correlationId;
 }
 
+function withCorrelationContext<T>(
+  correlationId: string,
+  factory: () => Observable<T>,
+): Observable<T> {
+  return new Observable((subscriber) => {
+    return correlationStorage.run({ correlationId }, () => {
+      return factory().subscribe(subscriber);
+    });
+  });
+}
+
 @Injectable()
 export class CorrelationLoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HttpObservability');
@@ -37,7 +48,7 @@ export class CorrelationLoggingInterceptor implements NestInterceptor {
     res.setHeader('X-Correlation-Id', correlationId);
     const start = Date.now();
 
-    return correlationStorage.run({ correlationId }, () =>
+    return withCorrelationContext(correlationId, () =>
       next.handle().pipe(
         tap({
           next: () => {

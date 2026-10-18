@@ -1,10 +1,4 @@
-import {
-  IsEnum,
-  IsIn,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { OrderStatus } from '@prisma/client';
 import { Domain, SUPPORTED_DOMAINS } from '../../common/constants/domains';
 

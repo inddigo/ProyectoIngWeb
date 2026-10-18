@@ -43,7 +43,6 @@ app = FastAPI(
 async def correlation_and_logging_middleware(request: Request, call_next: Any) -> Response:
     correlation_id = request.headers.get("x-correlation-id") or request.headers.get("x-request-id") or str(uuid.uuid4())
     request.state.correlation_id = correlation_id
-
     start = time.perf_counter()
 
     response: Response = await call_next(request)
@@ -96,4 +95,3 @@ def health_check() -> dict[str, Any]:
 
 
 app.include_router(router, prefix="/api/v1")
-

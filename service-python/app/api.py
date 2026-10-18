@@ -146,4 +146,3 @@ def get_metrics() -> dict[str, Any]:
         "web_retrieval": web_scraper.get_metrics(),
         "nlp_benchmark": evaluate_nlp_benchmark(),
     }
-

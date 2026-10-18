@@ -47,4 +47,3 @@ export class HealthController {
     return body;
   }
 }
-

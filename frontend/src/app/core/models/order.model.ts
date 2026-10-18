@@ -11,12 +11,33 @@ export type OrderStatus =
 export type AttributeValue = string | number | string[];
 export type Attributes = Record<string, AttributeValue>;
 
+export interface ExtractionMeta {
+  query_used: string;
+  raw_count: number;
+  valid_count: number;
+  invalid_dropped: number;
+  duplicates_removed: number;
+  cache_hit: boolean;
+  fallback_used: boolean;
+  latency_ms: number;
+}
+
 /** Respuesta del motor NLP (contrato snake_case del servicio Python). */
 export interface StructuredOrder {
   raw_text: string;
   domain: Domain;
   entities: Attributes & { confidence_score?: number };
-  web_references: { title: string; image_url: string; source: string }[];
+  web_references: {
+    title: string;
+    image_url: string;
+    source: string;
+    source_url?: string;
+    license?: string;
+    creator?: string;
+    query_used?: string;
+    retrieved_at?: string;
+  }[];
+  extraction_meta?: ExtractionMeta;
   fallback?: boolean;
 }
 
@@ -24,7 +45,13 @@ export interface WebReference {
   title: string;
   imageUrl: string;
   source: string;
+  sourceUrl?: string;
+  license?: string;
+  creator?: string;
+  queryUsed?: string;
+  retrievedAt?: string;
 }
+
 
 export interface Quote {
   id: string;

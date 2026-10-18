@@ -17,6 +17,7 @@ import {
   IonGrid,
   IonHeader,
   IonIcon,
+  IonNote,
   IonRefresher,
   IonRefresherContent,
   IonRow,
@@ -75,6 +76,7 @@ import { Router } from '@angular/router';
     IonCardContent,
     IonBadge,
     IonChip,
+    IonNote,
     IonText,
     IonSkeletonText,
   ],
@@ -135,6 +137,21 @@ import { Router } from '@angular/router';
                         <ion-chip [outline]="true">{{ label(entry[0]) }}: {{ format(entry[1]) }}</ion-chip>
                       }
                     </div>
+
+                    @if (order.webReferences?.length) {
+                      <div class="references ion-margin-top">
+                        @for (ref of order.webReferences; track ref.imageUrl) {
+                          <figure>
+                            <img [src]="ref.imageUrl" [alt]="ref.title" loading="lazy" />
+                            <figcaption>
+                              {{ ref.title }}<br />
+                              <ion-note>{{ ref.source }}</ion-note>
+                            </figcaption>
+                          </figure>
+                        }
+                      </div>
+                    }
+
 
                     @if (order.status === 'QUOTED' && order.quote) {
                       <h2 class="ion-margin-top">

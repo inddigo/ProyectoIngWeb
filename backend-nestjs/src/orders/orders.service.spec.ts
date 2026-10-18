@@ -13,25 +13,57 @@ describe('OrdersService', () => {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    webReference: {
+      findMany: jest.fn(),
+    },
   };
   const service = new OrdersService(prisma as any);
 
   beforeEach(() => jest.resetAllMocks());
 
-  it('crea el pedido como CONFIRMED_BY_CLIENT asociado al cliente', async () => {
+  it('crea el pedido como CONFIRMED_BY_CLIENT y deduplica referencias web por imageUrl', async () => {
     prisma.order.create.mockResolvedValue({ id: 'o1' });
     await service.create('client-1', {
       rawText: 'torta para 20',
       domain: 'cake',
       attributes: { servings: 20 },
       webReferences: [
-        { title: 't', imageUrl: 'https://img.cl/a.jpg', source: 'web' },
+        {
+          title: 't1',
+          imageUrl: 'https://img.cl/a.jpg',
+          source: 'Openverse',
+          license: 'CC BY 4.0',
+          queryUsed: 'batman cake',
+        },
+        {
+          title: 't1 duplicada',
+          imageUrl: 'https://IMG.cl/a.jpg ',
+          source: 'Openverse',
+        },
       ],
     });
     const { data } = prisma.order.create.mock.calls[0][0];
     expect(data.clientId).toBe('client-1');
     expect(data.status).toBe('CONFIRMED_BY_CLIENT');
     expect(data.webReferences.create).toHaveLength(1);
+    expect(data.webReferences.create[0].license).toBe('CC BY 4.0');
+  });
+
+  it('consulta referencias web indexadas con filtros de búsqueda y dominio', async () => {
+    prisma.webReference.findMany.mockResolvedValue([{ id: 'r1' }]);
+    const res = await service.searchWebReferences({
+      q: 'batman',
+      domain: 'cake',
+      source: 'Openverse',
+    });
+    expect(res).toEqual([{ id: 'r1' }]);
+    expect(prisma.webReference.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          order: { domain: 'cake' },
+        }),
+      }),
+    );
   });
 
   describe('decide', () => {
@@ -87,3 +119,4 @@ describe('OrdersService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
+

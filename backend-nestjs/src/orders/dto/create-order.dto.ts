@@ -29,7 +29,32 @@ export class WebReferenceDto {
   @IsNotEmpty()
   @MaxLength(100)
   source: string;
+
+  @IsUrl({ require_protocol: true })
+  @IsOptional()
+  sourceUrl?: string;
+
+  @IsString()
+  @MaxLength(50)
+  @IsOptional()
+  license?: string;
+
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  creator?: string;
+
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  queryUsed?: string;
+
+  @IsString()
+  @MaxLength(40)
+  @IsOptional()
+  retrievedAt?: string;
 }
+
 
 export class CreateOrderDto {
   @IsString()

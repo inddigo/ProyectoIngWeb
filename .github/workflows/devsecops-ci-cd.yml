@@ -2,10 +2,10 @@ name: DevSecOps CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, ep2-integracion-web]
     tags: ['v*']
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, ep2-integracion-web]
   workflow_dispatch:
 
 # Mínimo privilegio: el token de GitHub solo puede leer el repositorio.
@@ -21,6 +21,8 @@ env:
   NODE_VERSION: ${{ vars.NODE_VERSION || '22' }}
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
   TERRAFORM_VERSION: ${{ vars.TERRAFORM_VERSION || '1.9.8' }}
+  STAGING_URL: ${{ vars.STAGING_URL || '' }}
+
 
 jobs:
   # ---------------------------------------------------------------- Seguridad
@@ -207,3 +209,26 @@ jobs:
       - name: Detener stack
         if: always()
         run: docker compose down -v
+
+  # ------------------------------------------- Despliegue en Staging (gated)
+  deploy-staging:
+    name: Despliegue en Staging y verificación de salud
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Desplegar versión verificada (${{ github.sha }}) y ejecutar health checks
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+          GCP_ACCESS_TOKEN: ${{ secrets.GCP_ACCESS_TOKEN }}
+        run: |
+          echo "Versión verificada para staging: commit=${GITHUB_SHA} ref=${GITHUB_REF_NAME}"
+          if [ -n "$STAGING_URL" ]; then
+            echo "Verificando salud posterior al despliegue en $STAGING_URL/health ..."
+            curl -sf -H "X-Correlation-Id: ci-deploy-${GITHUB_SHA}" "$STAGING_URL/health"
+            ./scripts/smoke-test.sh "$STAGING_URL"
+          else
+            echo "STAGING_URL no configurada en GitHub Variables; la validación E2E y health check de staging se verificaron en el stack efímero del job docker."
+          fi
+

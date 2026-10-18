@@ -227,6 +227,14 @@ const PLACEHOLDERS: Record<Domain, string> = {
 
                     @if (data.web_references.length) {
                       <h3>Referencias visuales encontradas en la Web</h3>
+                      @if (data.extraction_meta; as meta) {
+                        <p class="muted">
+                          <ion-note>
+                            Consulta: "{{ meta.query_used }}" · {{ meta.valid_count }} válidas de {{ meta.raw_count }} ({{ meta.duplicates_removed }} duplicadas filtradas) · {{ meta.latency_ms }} ms
+                            {{ meta.cache_hit ? '· caché TTL' : '' }}
+                          </ion-note>
+                        </p>
+                      }
                       <div class="references">
                         @for (ref of data.web_references; track ref.image_url) {
                           <figure>
@@ -239,6 +247,7 @@ const PLACEHOLDERS: Record<Domain, string> = {
                         }
                       </div>
                     }
+
 
                     <ion-row class="ion-margin-top">
                       <ion-col size="12" sizeMd="8">
@@ -364,8 +373,14 @@ export class CustomerPortalComponent implements OnInit {
           title: r.title,
           imageUrl: r.image_url,
           source: r.source,
+          sourceUrl: r.source_url,
+          license: r.license,
+          creator: r.creator,
+          queryUsed: r.query_used,
+          retrievedAt: r.retrieved_at,
         })),
       })
+
       .subscribe({
         next: () => {
           this.sending.set(false);

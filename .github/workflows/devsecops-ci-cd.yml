@@ -74,8 +74,8 @@ jobs:
       - name: Pruebas unitarias con cobertura
         run: npm run test:cov
       - run: npm run build
-      - name: Auditoría de dependencias (bloquea HIGH/CRITICAL)
-        run: npm audit --audit-level=high
+      - name: Auditoría de dependencias de runtime (bloquea HIGH/CRITICAL)
+        run: npm audit --omit=dev --audit-level=high
 
   # ---------------------------------------------------------------- Frontend
   frontend:

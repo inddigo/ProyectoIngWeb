@@ -365,5 +365,3 @@ class WebReferenceScraper:
 
 
 web_scraper = WebReferenceScraper()
-
-

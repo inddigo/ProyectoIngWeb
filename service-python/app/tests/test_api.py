@@ -83,4 +83,3 @@ def test_metrics_endpoint_returns_web_and_nlp_evaluation():
     assert "web_retrieval" in data
     assert "nlp_benchmark" in data
     assert data["nlp_benchmark"]["entity_extraction_accuracy_pct"] >= 90.0
-

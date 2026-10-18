@@ -32,4 +32,3 @@ async function bootstrap() {
   Logger.log(`Backend escuchando en el puerto ${port}`, 'Bootstrap');
 }
 bootstrap();
-

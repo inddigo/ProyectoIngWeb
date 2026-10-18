@@ -30,7 +30,8 @@ export class WebReferenceDto {
   @MaxLength(100)
   source: string;
 
-  @IsUrl({ require_protocol: true })
+  @IsString()
+  @MaxLength(500)
   @IsOptional()
   sourceUrl?: string;
 

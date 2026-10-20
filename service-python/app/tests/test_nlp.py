@@ -115,4 +115,3 @@ def test_build_search_query_produces_distinct_english_queries():
     t6_text = "Quiero un dragón estilo tradicional japonés a full color de 25 cm en la pantorrilla"
     t6_entities, _ = nlp_engine.extract("tattoo", t6_text)
     assert nlp_engine.build_search_query("tattoo", t6_text, t6_entities) == "dragon japanese"
-

@@ -128,7 +128,7 @@ async def structure_order(payload: OrderInput) -> StructuredOrderResponse:
     entities, confidence = nlp_engine.extract(payload.domain, payload.raw_text)
     entities["confidence_score"] = confidence
 
-    query = entities.get("theme") or entities.get("style") or ""
+    query = nlp_engine.build_search_query(payload.domain, payload.raw_text, entities)
     raw_refs, meta = await web_scraper.get_references_with_meta(payload.domain, str(query))
 
     return StructuredOrderResponse(

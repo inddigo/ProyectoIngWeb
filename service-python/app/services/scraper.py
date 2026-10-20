@@ -56,7 +56,7 @@ TRACKING_QUERY_PARAMS = {
 FALLBACK_REFERENCES: dict[str, list[dict[str, str]]] = {
     "cake": [
         {
-            "title": "Referencia genérica de pastel",
+            "title": "Pastel artesanal de chocolate y frutos",
             "image_url": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500",
             "source": "Unsplash (respaldo)",
             "source_url": "https://unsplash.com/photos/photo-1578985545062-69928b1d9587",
@@ -64,11 +64,41 @@ FALLBACK_REFERENCES: dict[str, list[dict[str, str]]] = {
             "creator": "Unsplash Community",
             "query_used": "cake",
             "retrieved_at": "2026-01-01T00:00:00Z",
-        }
+        },
+        {
+            "title": "Torta decorada para celebración y eventos",
+            "image_url": "https://images.unsplash.com/photo-1535141192574-5d4897c12636?w=500",
+            "source": "Unsplash (respaldo)",
+            "source_url": "https://unsplash.com/photos/photo-1535141192574-5d4897c12636",
+            "license": "UNS-FREE",
+            "creator": "Unsplash Community",
+            "query_used": "cake",
+            "retrieved_at": "2026-01-01T00:00:00Z",
+        },
+        {
+            "title": "Pastel de boda elegante de varios pisos",
+            "image_url": "https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=500",
+            "source": "Unsplash (respaldo)",
+            "source_url": "https://unsplash.com/photos/photo-1535254973040-607b474cb50d",
+            "license": "UNS-FREE",
+            "creator": "Unsplash Community",
+            "query_used": "cake",
+            "retrieved_at": "2026-01-01T00:00:00Z",
+        },
+        {
+            "title": "Torta de cumpleaños con crema y frutas",
+            "image_url": "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=500",
+            "source": "Unsplash (respaldo)",
+            "source_url": "https://unsplash.com/photos/photo-1563729784474-d77dbb933a9e",
+            "license": "UNS-FREE",
+            "creator": "Unsplash Community",
+            "query_used": "cake",
+            "retrieved_at": "2026-01-01T00:00:00Z",
+        },
     ],
     "tattoo": [
         {
-            "title": "Referencia genérica de tatuaje",
+            "title": "Diseño artístico de tatuaje en antebrazo",
             "image_url": "https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=500",
             "source": "Unsplash (respaldo)",
             "source_url": "https://unsplash.com/photos/photo-1611501275019-9b5cda994e8d",
@@ -76,7 +106,37 @@ FALLBACK_REFERENCES: dict[str, list[dict[str, str]]] = {
             "creator": "Unsplash Community",
             "query_used": "tattoo",
             "retrieved_at": "2026-01-01T00:00:00Z",
-        }
+        },
+        {
+            "title": "Tatuaje realista en blanco y negro con sombreado",
+            "image_url": "https://images.unsplash.com/photo-1590246814883-57c511e76917?w=500",
+            "source": "Unsplash (respaldo)",
+            "source_url": "https://unsplash.com/photos/photo-1590246814883-57c511e76917",
+            "license": "UNS-FREE",
+            "creator": "Unsplash Community",
+            "query_used": "tattoo",
+            "retrieved_at": "2026-01-01T00:00:00Z",
+        },
+        {
+            "title": "Tatuaje de línea fina y diseño floral",
+            "image_url": "https://images.unsplash.com/photo-1562962230-16e4623d36e6?w=500",
+            "source": "Unsplash (respaldo)",
+            "source_url": "https://unsplash.com/photos/photo-1562962230-16e4623d36e6",
+            "license": "UNS-FREE",
+            "creator": "Unsplash Community",
+            "query_used": "tattoo",
+            "retrieved_at": "2026-01-01T00:00:00Z",
+        },
+        {
+            "title": "Tatuaje tradicional e ilustración en piel",
+            "image_url": "https://images.unsplash.com/photo-1568515045052-f9a854d70bfd?w=500",
+            "source": "Unsplash (respaldo)",
+            "source_url": "https://unsplash.com/photos/photo-1568515045052-f9a854d70bfd",
+            "license": "UNS-FREE",
+            "creator": "Unsplash Community",
+            "query_used": "tattoo",
+            "retrieved_at": "2026-01-01T00:00:00Z",
+        },
     ],
 }
 
@@ -224,6 +284,15 @@ class WebReferenceScraper:
 
         try:
             results, parse_stats = await self._search_openverse(search)
+            if not results:
+                tokens = [t for t in clean_query.split() if len(t) >= 3]
+                if len(tokens) > 1:
+                    domain_kw = DOMAIN_KEYWORDS.get(domain, "cake")
+                    broad_search = f"{tokens[0]} {domain_kw}".strip()
+                    if broad_search.lower() != search.lower():
+                        results, parse_stats = await self._search_openverse(broad_search)
+                        if results:
+                            search = broad_search
         except (httpx.HTTPError, ValueError, KeyError) as exc:
             latency_ms = round((time.perf_counter() - start) * 1000, 2)
             self._stats["total_latency_ms"] += latency_ms
@@ -351,7 +420,9 @@ class WebReferenceScraper:
     def _build_fallback(self, domain: str, search: str) -> list[dict[str, str]]:
         now_iso = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         base_list = FALLBACK_REFERENCES.get(domain, FALLBACK_REFERENCES["cake"])
-        return [{**item, "query_used": search[:100], "retrieved_at": now_iso} for item in base_list]
+        offset = sum(ord(c) for c in search) % len(base_list) if base_list else 0
+        rotated = base_list[offset:] + base_list[:offset]
+        return [{**item, "query_used": search[:100], "retrieved_at": now_iso} for item in rotated]
 
     def _store_in_cache(self, key: str, references: list[dict[str, str]], meta: dict[str, Any], now: float) -> None:
         if len(self._cache) >= MAX_CACHE_ENTRIES:

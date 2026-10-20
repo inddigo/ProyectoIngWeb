@@ -147,7 +147,7 @@ jobs:
         env:
           # Sin credenciales GCP se ejecuta un plan "offline" (sin refrescar estado)
           # que verifica la configuración completa sin tocar la nube.
-          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ secrets.GCP_ACCESS_TOKEN || 'offline-plan' }}
+          GOOGLE_OAUTH_ACCESS_TOKEN: offline-plan
         run: |
           terraform plan -input=false -refresh=false -lock=false \
             -var-file=environments/staging.tfvars.example \
@@ -163,7 +163,7 @@ jobs:
       COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      EVIDENCE_DIR: ${{ runner.temp }}/ep2-ci-evidence
+      EVIDENCE_DIR: ep2-ci-evidence
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Construir imágenes
@@ -206,7 +206,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ep2-ci-evidence
-          path: ${{ runner.temp }}/ep2-ci-evidence
+          path: ep2-ci-evidence
           retention-days: 14
       - name: Exportar exactamente las imágenes verificadas
         if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
@@ -251,7 +251,7 @@ jobs:
       TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
       TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
       APP_REVISION: ${{ github.sha }}
-      EVIDENCE_DIR: ${{ runner.temp }}/ep2-staging-evidence
+      EVIDENCE_DIR: ep2-staging-evidence
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Comprobar configuración obligatoria
@@ -283,7 +283,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ep2-staging-evidence
-          path: ${{ runner.temp }}/ep2-staging-evidence
+          path: ep2-staging-evidence
           if-no-files-found: warn
           retention-days: 30
 

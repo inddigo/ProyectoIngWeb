@@ -39,6 +39,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      APP_REVISION: ${APP_REVISION:-local}
       PORT: 3000
       # start.sh arma DATABASE_URL codificando la contraseña
       POSTGRES_HOST: postgres

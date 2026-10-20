@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsIn,
+  IsISO8601,
   IsNotEmpty,
   IsNumber,
   IsObject,
@@ -22,7 +23,7 @@ export class WebReferenceDto {
   @MaxLength(200)
   title: string;
 
-  @IsUrl({ require_protocol: true })
+  @IsUrl({ require_protocol: true, protocols: ['https'] })
   imageUrl: string;
 
   @IsString()
@@ -30,7 +31,7 @@ export class WebReferenceDto {
   @MaxLength(100)
   source: string;
 
-  @IsString()
+  @IsUrl({ require_protocol: true, protocols: ['https'] })
   @MaxLength(500)
   @IsOptional()
   sourceUrl?: string;
@@ -50,7 +51,7 @@ export class WebReferenceDto {
   @IsOptional()
   queryUsed?: string;
 
-  @IsString()
+  @IsISO8601({ strict: true })
   @MaxLength(40)
   @IsOptional()
   retrievedAt?: string;

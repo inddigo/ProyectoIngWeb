@@ -244,6 +244,12 @@ SUGAR_FREE_TERMS = (
 )
 
 CAKE_THEME_EN: dict[str, str] = {
+    "batman": "batman",
+    "spiderman": "spiderman",
+    "star wars": "star wars",
+    "marvel": "marvel",
+    "frozen": "frozen",
+    "pokemon": "pokemon",
     "boda": "wedding",
     "matrimonio": "wedding",
     "novios": "wedding",
@@ -648,8 +654,10 @@ class AdvancedNLPEngine:
             return " ".join(terms[:2]) or "blackwork"
 
         theme = str(entities.get("theme") or "").strip()
-        if theme and theme.lower() != "personalizada":
-            terms.append(CAKE_THEME_EN.get(theme.lower(), theme.lower()))
+        # Solo vocabulario público del catálogo sale del sistema. Los temas libres
+        # pueden contener nombres, teléfonos o direcciones y permanecen internos.
+        if theme.lower() in CAKE_THEME_EN:
+            terms.append(CAKE_THEME_EN[theme.lower()])
         elif any(w in lower for w in ("niño", "niños", "niña", "niñas", "infantil")):
             terms.append("kids birthday")
 
@@ -657,8 +665,8 @@ class AdvancedNLPEngine:
         if isinstance(flavors, list):
             for flavor in flavors:
                 if flavor and flavor != "Tradicional":
-                    en_flavor = CAKE_FLAVOR_EN.get(str(flavor), str(flavor).lower())
-                    if en_flavor not in terms:
+                    en_flavor = CAKE_FLAVOR_EN.get(str(flavor))
+                    if en_flavor and en_flavor not in terms:
                         terms.append(en_flavor)
                     if len(terms) >= 2:
                         break

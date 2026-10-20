@@ -18,3 +18,7 @@ En la Entrega Parcial 1 (EP1), la obtención de referencias visuales desde la AP
 ## Consecuencias
 - **Positivas:** Trazabilidad completa del origen y licencia de cada imagen, protección frente a datos corruptos o duplicados, cumplimiento de atribución Creative Commons y métricas verificables en tiempo real.
 - **Negativas / Trade-offs:** Ligero incremento en el tamaño de cada fila en `web_references` por los metadatos adicionales, ampliamente compensado por los índices de búsqueda y la prevención de duplicados.
+
+## Revisión del 20 de octubre de 2026
+
+Se inspecciona el lote completo antes de seleccionar cuatro imágenes. Se distinguen válidos totales y retornados; sin datos la tasa es nula. La consulta externa utiliza vocabulario cerrado para evitar filtrar temas libres. No se infieren licencias ni autores ausentes y no se usan imágenes estáticas como sustituto de recuperación real. Los fallos actualizan el estado externo a degraded. CI usa una fuente sintética identificada; staging exige fuente real, SHA desplegado y evidencia de persistencia.

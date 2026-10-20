@@ -22,7 +22,7 @@ export class OrdersService {
     const seenUrls = new Set<string>();
     const uniqueRefs = (dto.webReferences ?? [])
       .filter((ref) => {
-        const key = ref.imageUrl.trim().toLowerCase();
+        const key = new URL(ref.imageUrl.trim()).href;
         if (seenUrls.has(key)) {
           return false;
         }
@@ -31,7 +31,7 @@ export class OrdersService {
       })
       .map((ref) => ({
         title: ref.title,
-        imageUrl: ref.imageUrl,
+        imageUrl: new URL(ref.imageUrl.trim()).href,
         source: ref.source,
         sourceUrl: ref.sourceUrl,
         license: ref.license,
@@ -56,7 +56,7 @@ export class OrdersService {
   }
 
   /** Consulta e indexación eficiente sobre las referencias web almacenadas en PostgreSQL. */
-  searchWebReferences(query: SearchWebReferencesQuery) {
+  searchWebReferences(query: SearchWebReferencesQuery, user: AuthUser) {
     const where: Prisma.WebReferenceWhereInput = {};
     if (query.q) {
       where.OR = [
@@ -67,9 +67,10 @@ export class OrdersService {
     if (query.source) {
       where.source = { contains: query.source, mode: 'insensitive' };
     }
-    if (query.domain) {
-      where.order = { domain: query.domain };
-    }
+    where.order = {
+      ...(query.domain ? { domain: query.domain } : {}),
+      ...(user.role === 'CLIENT' ? { clientId: user.userId } : {}),
+    };
 
     return this.prisma.webReference.findMany({
       where,

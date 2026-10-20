@@ -16,6 +16,7 @@ Este módulo implementa:
 from __future__ import annotations
 
 import html
+import json
 import logging
 import os
 import re
@@ -51,93 +52,6 @@ TRACKING_QUERY_PARAMS = {
     "fbclid",
     "gclid",
     "ref",
-}
-
-FALLBACK_REFERENCES: dict[str, list[dict[str, str]]] = {
-    "cake": [
-        {
-            "title": "Pastel artesanal de chocolate y frutos",
-            "image_url": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500",
-            "source": "Unsplash (respaldo)",
-            "source_url": "https://unsplash.com/photos/photo-1578985545062-69928b1d9587",
-            "license": "UNS-FREE",
-            "creator": "Unsplash Community",
-            "query_used": "cake",
-            "retrieved_at": "2026-01-01T00:00:00Z",
-        },
-        {
-            "title": "Torta decorada para celebración y eventos",
-            "image_url": "https://images.unsplash.com/photo-1535141192574-5d4897c12636?w=500",
-            "source": "Unsplash (respaldo)",
-            "source_url": "https://unsplash.com/photos/photo-1535141192574-5d4897c12636",
-            "license": "UNS-FREE",
-            "creator": "Unsplash Community",
-            "query_used": "cake",
-            "retrieved_at": "2026-01-01T00:00:00Z",
-        },
-        {
-            "title": "Pastel de boda elegante de varios pisos",
-            "image_url": "https://images.unsplash.com/photo-1535254973040-607b474cb50d?w=500",
-            "source": "Unsplash (respaldo)",
-            "source_url": "https://unsplash.com/photos/photo-1535254973040-607b474cb50d",
-            "license": "UNS-FREE",
-            "creator": "Unsplash Community",
-            "query_used": "cake",
-            "retrieved_at": "2026-01-01T00:00:00Z",
-        },
-        {
-            "title": "Torta de cumpleaños con crema y frutas",
-            "image_url": "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=500",
-            "source": "Unsplash (respaldo)",
-            "source_url": "https://unsplash.com/photos/photo-1563729784474-d77dbb933a9e",
-            "license": "UNS-FREE",
-            "creator": "Unsplash Community",
-            "query_used": "cake",
-            "retrieved_at": "2026-01-01T00:00:00Z",
-        },
-    ],
-    "tattoo": [
-        {
-            "title": "Diseño artístico de tatuaje en antebrazo",
-            "image_url": "https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=500",
-            "source": "Unsplash (respaldo)",
-            "source_url": "https://unsplash.com/photos/photo-1611501275019-9b5cda994e8d",
-            "license": "UNS-FREE",
-            "creator": "Unsplash Community",
-            "query_used": "tattoo",
-            "retrieved_at": "2026-01-01T00:00:00Z",
-        },
-        {
-            "title": "Tatuaje realista en blanco y negro con sombreado",
-            "image_url": "https://images.unsplash.com/photo-1590246814883-57c511e76917?w=500",
-            "source": "Unsplash (respaldo)",
-            "source_url": "https://unsplash.com/photos/photo-1590246814883-57c511e76917",
-            "license": "UNS-FREE",
-            "creator": "Unsplash Community",
-            "query_used": "tattoo",
-            "retrieved_at": "2026-01-01T00:00:00Z",
-        },
-        {
-            "title": "Tatuaje de línea fina y diseño floral",
-            "image_url": "https://images.unsplash.com/photo-1562962230-16e4623d36e6?w=500",
-            "source": "Unsplash (respaldo)",
-            "source_url": "https://unsplash.com/photos/photo-1562962230-16e4623d36e6",
-            "license": "UNS-FREE",
-            "creator": "Unsplash Community",
-            "query_used": "tattoo",
-            "retrieved_at": "2026-01-01T00:00:00Z",
-        },
-        {
-            "title": "Tatuaje tradicional e ilustración en piel",
-            "image_url": "https://images.unsplash.com/photo-1568515045052-f9a854d70bfd?w=500",
-            "source": "Unsplash (respaldo)",
-            "source_url": "https://unsplash.com/photos/photo-1568515045052-f9a854d70bfd",
-            "license": "UNS-FREE",
-            "creator": "Unsplash Community",
-            "query_used": "tattoo",
-            "retrieved_at": "2026-01-01T00:00:00Z",
-        },
-    ],
 }
 
 
@@ -188,7 +102,7 @@ def normalize_url(raw_url: str | None) -> str | None:
 def normalize_license(license_code: str | None, license_version: str | None = None) -> str:
     """Estandariza el código de licencia abierta (ej. 'by-sa', '4.0' -> 'CC BY-SA 4.0')."""
     if not license_code or not isinstance(license_code, str):
-        return "CC-BY"
+        return "Licencia no informada"
     code = license_code.strip().upper()
     version = (license_version or "").strip()
     if code in ("CC0", "PDM"):
@@ -217,11 +131,13 @@ class WebReferenceScraper:
             "error_count": 0,
             "raw_records_seen": 0,
             "valid_records_kept": 0,
+            "valid_records_total": 0,
             "invalid_records_dropped": 0,
             "duplicates_removed": 0,
             "total_latency_ms": 0.0,
             "last_error": None,
             "last_success_at": None,
+            "source_status": "unknown",
         }
 
     def clear_cache(self) -> None:
@@ -231,7 +147,7 @@ class WebReferenceScraper:
         """Calcula las métricas de calidad de datos y desempeño de recuperación web."""
         reqs = self._stats["total_requests"]
         raw = self._stats["raw_records_seen"]
-        valid = self._stats["valid_records_kept"]
+        valid = self._stats["valid_records_total"]
         dups = self._stats["duplicates_removed"]
         errors = self._stats["error_count"]
         fallbacks = self._stats["fallback_count"]
@@ -242,10 +158,11 @@ class WebReferenceScraper:
             "cache_hits": self._stats["cache_hits"],
             "cache_hit_rate_pct": round((self._stats["cache_hits"] / reqs) * 100, 2) if reqs else 0.0,
             "raw_records_seen": raw,
-            "valid_records_kept": valid,
+            "valid_records_kept": self._stats["valid_records_kept"],
+            "valid_records_total": valid,
             "invalid_records_dropped": self._stats["invalid_records_dropped"],
             "duplicates_removed": dups,
-            "valid_records_rate_pct": round((valid / raw) * 100, 2) if raw else 100.0,
+            "valid_records_rate_pct": round((valid / raw) * 100, 2) if raw else None,
             "duplicate_rate_pct": round((dups / raw) * 100, 2) if raw else 0.0,
             "avg_latency_ms": round(self._stats["total_latency_ms"] / reqs, 2) if reqs else 0.0,
             "error_rate_pct": round((errors / reqs) * 100, 2) if reqs else 0.0,
@@ -254,6 +171,7 @@ class WebReferenceScraper:
             "cache_ttl_seconds": self.ttl_seconds,
             "last_success_at": self._stats["last_success_at"],
             "last_error": self._stats["last_error"],
+            "source_status": self._stats["source_status"],
         }
 
     async def get_references(self, domain: str, query: str) -> list[dict[str, str]]:
@@ -298,13 +216,17 @@ class WebReferenceScraper:
             self._stats["total_latency_ms"] += latency_ms
             self._stats["error_count"] += 1
             self._stats["fallback_count"] += 1
-            self._stats["last_error"] = str(exc)
-            logger.warning("Openverse no disponible (%s); usando respaldo", exc)
+            self._stats["last_error"] = type(exc).__name__
+            self._stats["source_status"] = "degraded"
+            logger.warning(
+                json.dumps({"event": "web_source_error", "provider": "openverse", "error": type(exc).__name__})
+            )
             fallback = self._build_fallback(domain, search)
             return fallback, {
                 "query_used": search,
                 "raw_count": 0,
-                "valid_count": len(fallback),
+                "valid_count": 0,
+                "returned_count": len(fallback),
                 "invalid_dropped": 0,
                 "duplicates_removed": 0,
                 "cache_hit": False,
@@ -317,9 +239,12 @@ class WebReferenceScraper:
 
         if not results:
             self._stats["fallback_count"] += 1
+            self._stats["source_status"] = "empty"
+            self._stats["last_error"] = None
             fallback = self._build_fallback(domain, search)
             return fallback, {
                 **parse_stats,
+                "returned_count": len(fallback),
                 "query_used": search,
                 "cache_hit": False,
                 "fallback_used": True,
@@ -327,6 +252,8 @@ class WebReferenceScraper:
             }
 
         self._stats["last_success_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        self._stats["last_error"] = None
+        self._stats["source_status"] = "ready"
         meta = {
             **parse_stats,
             "query_used": search,
@@ -345,6 +272,8 @@ class WebReferenceScraper:
             response.raise_for_status()
             data = response.json()
 
+        if not isinstance(data, dict) or not isinstance(data.get("results"), list):
+            raise ValueError("Contrato Openverse inválido")
         return self.process_raw_results(data.get("results", []), search)
 
     def process_raw_results(
@@ -386,7 +315,7 @@ class WebReferenceScraper:
 
             provider = clean_and_normalize_text(item.get("source") or item.get("provider"), fallback="web", max_len=40)
             license_label = normalize_license(item.get("license"), item.get("license_version"))
-            creator = clean_and_normalize_text(item.get("creator"), fallback="Autor CC", max_len=80)
+            creator = clean_and_normalize_text(item.get("creator"), fallback="Autor no informado", max_len=80)
             landing_url = normalize_url(item.get("foreign_landing_url") or item.get("url")) or clean_url
 
             references.append(
@@ -401,28 +330,27 @@ class WebReferenceScraper:
                     "retrieved_at": retrieved_at,
                 }
             )
-            if len(references) >= MAX_RESULTS:
-                break
-
+        valid_count = len(references)
+        references = references[:MAX_RESULTS]
         self._stats["raw_records_seen"] += raw_count
         self._stats["valid_records_kept"] += len(references)
+        self._stats["valid_records_total"] += valid_count
         self._stats["invalid_records_dropped"] += invalid_dropped
         self._stats["duplicates_removed"] += duplicates_removed
 
         stats = {
             "raw_count": raw_count,
-            "valid_count": len(references),
+            "valid_count": valid_count,
+            "returned_count": len(references),
             "invalid_dropped": invalid_dropped,
             "duplicates_removed": duplicates_removed,
         }
         return references, stats
 
     def _build_fallback(self, domain: str, search: str) -> list[dict[str, str]]:
-        now_iso = datetime.now(UTC).isoformat().replace("+00:00", "Z")
-        base_list = FALLBACK_REFERENCES.get(domain, FALLBACK_REFERENCES["cake"])
-        offset = sum(ord(c) for c in search) % len(base_list) if base_list else 0
-        rotated = base_list[offset:] + base_list[:offset]
-        return [{**item, "query_used": search[:100], "retrieved_at": now_iso} for item in rotated]
+        # No inventar autoría/licencias ni presentar imágenes estáticas como datos recuperados.
+        # El cliente puede continuar con el formulario sin referencias externas.
+        return []
 
     def _store_in_cache(self, key: str, references: list[dict[str, str]], meta: dict[str, Any], now: float) -> None:
         if len(self._cache) >= MAX_CACHE_ENTRIES:

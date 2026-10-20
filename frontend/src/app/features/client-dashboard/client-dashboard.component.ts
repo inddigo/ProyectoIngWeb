@@ -138,7 +138,7 @@ import { Router } from '@angular/router';
                       }
                     </div>
 
-                    @if (order.webReferences?.length) {
+                    @if (order.webReferences.length) {
                       <div class="references ion-margin-top">
                         @for (ref of order.webReferences; track ref.imageUrl) {
                           <figure>
@@ -146,6 +146,11 @@ import { Router } from '@angular/router';
                             <figcaption>
                               {{ ref.title }}<br />
                               <ion-note>{{ ref.source }}</ion-note>
+                              <br />
+                              <span>{{ ref.creator || 'Autor no informado' }} · {{ ref.license || 'Licencia no informada' }}</span>
+                              @if (ref.sourceUrl) {
+                                <br /><a [href]="ref.sourceUrl" target="_blank" rel="noopener noreferrer">Ver obra original y condiciones de uso</a>
+                              }
                             </figcaption>
                           </figure>
                         }

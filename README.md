@@ -15,6 +15,10 @@ costos asistida por reglas. El cliente sigue su pedido y acepta o rechaza la cot
 
 ---
 
+## Estado de preparación de EP2
+
+Correcciones y validación técnica: [guía de entrega y evidencias](docs/entrega2.md). El staging público requiere habilitar un proyecto GCP; no está desplegado todavía. El flujo de CI utiliza una fuente sintética explícita; el despliegue exige datos reales de Openverse.
+
 ## 1. Continuidad y correcciones de la EP1
 
 En la **Entrega Parcial 2 (EP2)** se reutiliza la base arquitectónica, multiplataforma y DevSecOps de la EP1, incorporando las siguientes mejoras trazables (detalle en [docs/proyecto.md](docs/proyecto.md#4-continuidad-y-correcciones-incorporadas-desde-la-ep1) y [ADR-006](docs/ADR/006-recuperacion-web-y-calidad-ep2.md)):
@@ -61,11 +65,13 @@ En la **Entrega Parcial 2 (EP2)** se reutiliza la base arquitectónica, multipla
 4. **Deduplicación en 2 niveles:**
    - En `service-python`: filtra URLs canónicas repetidas y títulos normalizados idénticos dentro del lote crudo (`duplicates_removed`).
    - En `backend-nestjs` / PostgreSQL: deduplica por `imageUrl` en `OrdersService.create` y protege la tabla `web_references` con `UNIQUE (order_id, image_url)`.
-5. **Manejo de indisponibilidad:** Si Openverse no responde o retorna vacío, `service-python` entrega referencias de respaldo verificadas (`fallback_used: true`). Si `service-python` completo falla tras el reintento en NestJS, el orquestador responde `fallback: true` permitiendo al cliente completar el formulario manualmente.
+5. **Manejo de indisponibilidad:** Si Openverse no responde o retorna vacío, `service-python` devuelve cero referencias y `fallback_used: true`; el usuario puede continuar sin imágenes. Si `service-python` completo falla tras el reintento en NestJS, el orquestador responde `fallback: true` permitiendo al cliente completar el formulario manualmente.
 
 ---
 
 ## 4. Documentación de APIs (NestJS y FastAPI)
+
+Swagger de NestJS: `/api/docs`; especificación OpenAPI: `/api/docs-json`. FastAPI: `/docs` y `/openapi.json`.
 
 ### 4.1. API principal — Backend Orquestador (`backend-nestjs`, puerto `3000`)
 
@@ -102,9 +108,9 @@ Documentación OpenAPI interactiva generada automáticamente por FastAPI en `htt
 
 ### 5.1. Métricas de evaluación aplicadas
 Expuestas en `/api/v1/nlp/metrics` y verificadas en [`service-python/app/tests/test_scraper.py`](service-python/app/tests/test_scraper.py) y [`test_api.py`](service-python/app/tests/test_api.py):
-- **Porcentaje de registros válidos (`valid_records_rate_pct`):** proporción de resultados de Openverse que superan validación HTTPS, limpieza y deduplicación (**100 %** en consultas normales; **40 %** en el lote de prueba con ruido y duplicados inyectados).
+- **Porcentaje de registros válidos (`valid_records_rate_pct`):** proporción de resultados de Openverse que superan validación HTTPS, limpieza y deduplicación (**100 %** en un lote de 12 registros válidos y únicos; **40 %** en el lote de prueba con ruido y duplicados inyectados).
 - **Porcentaje de duplicados filtrados (`duplicate_rate_pct`):** proporción de elementos descartados por URL canónica o título repetido (**40 %** en el lote de prueba con duplicados).
-- **Tiempo de respuesta (`avg_latency_ms`):** `~350–650 ms` contra Openverse en frío y `< 1 ms` en aciertos de caché TTL.
+- **Tiempo de respuesta (`avg_latency_ms`):** se mide en cada ejecución; no se garantiza una latencia de la fuente externa. La caché se verifica con reloj controlado.
 - **Exactitud de extracción de entidades (`entity_extraction_accuracy_pct`):** **100 % (21/21 atributos)** sobre los 6 casos multirubro del conjunto `EVALUATION_BENCHMARK`.
 
 ### 5.2. Especificación preliminar de la capacidad adaptativa (Módulo 3)
@@ -191,8 +197,8 @@ Archivo: [`.github/workflows/devsecops-ci-cd.yml`](.github/workflows/devsecops-c
 ## 10. Variables de entorno, secretos y limitaciones conocidas
 
 ### 10.1. GitHub Actions Variables y Secrets
-- **Variables (`vars.*`):** `NODE_VERSION` (`22`), `PYTHON_VERSION` (`3.12`), `TERRAFORM_VERSION` (`1.9.8`), `GCP_PROJECT_ID` (`cotiza-staging`), `STAGING_URL`.
-- **Secrets (`secrets.*`):** `JWT_SECRET`, `DB_PASSWORD`, `GCP_ACCESS_TOKEN`.
+- **Variables (`vars.*`):** `NODE_VERSION` (`22`), `PYTHON_VERSION` (`3.12`), `TERRAFORM_VERSION` (`1.9.8`); para staging: `GCP_PROJECT_ID` real, `GCP_REGION`, `TF_STATE_BUCKET`, `GCP_DEPLOY_SA`, `GCP_WIF_PROVIDER`. La URL se obtiene de Terraform.
+- **Secrets (`secrets.*`):** `JWT_SECRET`, `DB_PASSWORD`, autenticación GCP mediante OIDC (ver [staging](docs/staging.md)).
 - **Archivos de ejemplo:** [`.env.example`](.env.example), [`backend-nestjs/.env.example`](backend-nestjs/.env.example), [`service-python/.env.example`](service-python/.env.example) y [`terraform/environments/staging.tfvars.example`](terraform/environments/staging.tfvars.example).
 
 ### 10.2. Limitaciones actuales identificadas y trabajo futuro (hacia Entrega Final)

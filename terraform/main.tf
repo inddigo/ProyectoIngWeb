@@ -63,11 +63,14 @@ module "python_service" {
   source       = "./modules/cloudrun"
   region       = var.region
   service_name = "${local.prefix}-nlp"
+  project_id   = var.project_id
+  memory       = "1Gi"
   image        = "${local.registry}/python-service:${var.image_tag}"
   port         = 8000
   # Solo accesible por el backend (sin acceso público)
-  public          = false
-  ingress         = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  public = false
+  # IAM autentica al llamador; no requiere un conector VPC para tráfico entre servicios.
+  ingress         = "INGRESS_TRAFFIC_ALL"
   invoker_members = { backend = "serviceAccount:${module.backend.service_account_email}" }
   depends_on      = [google_project_service.apis]
 }
@@ -76,42 +79,37 @@ module "backend" {
   source       = "./modules/cloudrun"
   region       = var.region
   service_name = "${local.prefix}-api"
+  project_id   = var.project_id
   image        = "${local.registry}/backend-nestjs:${var.image_tag}"
   port         = 3000
   public       = true
   env_vars = {
-    NODE_ENV           = "production"
-    PYTHON_SERVICE_URL = module.python_service.url
-    SEED_DEMO_DATA     = var.environment == "staging" ? "true" : "false"
+    NODE_ENV             = "production"
+    PYTHON_SERVICE_URL   = module.python_service.url
+    PYTHON_AUTH_AUDIENCE = module.python_service.url
+    APP_REVISION         = var.image_tag
+    SEED_DEMO_DATA       = var.environment == "staging" ? "true" : "false"
   }
   secret_env_vars = {
     JWT_SECRET   = google_secret_manager_secret.jwt.secret_id
     DATABASE_URL = google_secret_manager_secret.database_url.secret_id
   }
   cloudsql_instances = [module.database.connection_name]
-  depends_on         = [google_project_service.apis]
+  depends_on = [
+    google_project_service.apis,
+    google_secret_manager_secret_version.jwt,
+    google_secret_manager_secret_version.database_url,
+  ]
 }
 
 module "frontend" {
   source       = "./modules/cloudrun"
   region       = var.region
   service_name = "${local.prefix}-web"
+  project_id   = var.project_id
   image        = "${local.registry}/frontend:${var.image_tag}"
   port         = 8080
   public       = true
+  env_vars     = { BACKEND_ORIGIN = module.backend.url }
   depends_on   = [google_project_service.apis]
-}
-
-# Permisos mínimos del backend: leer sus secretos y conectarse a Cloud SQL
-resource "google_secret_manager_secret_iam_member" "backend_secrets" {
-  for_each  = { jwt = google_secret_manager_secret.jwt.id, db = google_secret_manager_secret.database_url.id }
-  secret_id = each.value
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${module.backend.service_account_email}"
-}
-
-resource "google_project_iam_member" "backend_cloudsql" {
-  project = var.project_id
-  role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${module.backend.service_account_email}"
 }

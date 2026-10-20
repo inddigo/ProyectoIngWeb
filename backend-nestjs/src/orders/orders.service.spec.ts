@@ -51,17 +51,33 @@ describe('OrdersService', () => {
 
   it('consulta referencias web indexadas con filtros de búsqueda y dominio', async () => {
     prisma.webReference.findMany.mockResolvedValue([{ id: 'r1' }]);
-    const res = await service.searchWebReferences({
-      q: 'batman',
-      domain: 'cake',
-      source: 'Openverse',
-    });
+    const res = await service.searchWebReferences(
+      {
+        q: 'batman',
+        domain: 'cake',
+        source: 'Openverse',
+      },
+      { userId: 'b1', email: 'b@test.cl', role: 'BAKER' },
+    );
     expect(res).toEqual([{ id: 'r1' }]);
     expect(prisma.webReference.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           order: { domain: 'cake' },
         }),
+      }),
+    );
+  });
+
+  it('limita la búsqueda de referencias del cliente a sus propios pedidos', async () => {
+    prisma.webReference.findMany.mockResolvedValue([]);
+    await service.searchWebReferences(
+      {},
+      { userId: 'c1', email: 'c@test.cl', role: 'CLIENT' },
+    );
+    expect(prisma.webReference.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ order: { clientId: 'c1' } }),
       }),
     );
   });

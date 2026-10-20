@@ -15,6 +15,7 @@ export interface ExtractionMeta {
   query_used: string;
   raw_count: number;
   valid_count: number;
+  returned_count: number;
   invalid_dropped: number;
   duplicates_removed: number;
   cache_hit: boolean;

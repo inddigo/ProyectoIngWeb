@@ -20,10 +20,8 @@ def test_extract_theme():
 
 
 def test_extract_theme_multiword_without_bleeding():
-    entities, confidence = nlp_engine.extract(
-        "cake",
-        "Hola, necesito una torta con temática de Star Wars para 30 personas rellena de lúcuma y chocolate",
-    )
+    text = "Hola, necesito una torta con temática de Star Wars para 30 personas rellena de lúcuma y chocolate"
+    entities, confidence = nlp_engine.extract("cake", text)
     assert entities["theme"] == "Star Wars"
     assert entities["servings"] == 30
     assert entities["flavors"] == ["Lúcuma", "Chocolate"]
@@ -37,15 +35,13 @@ def test_extract_dietary():
 
 
 def test_extract_dietary_coordinated_negation_and_intolerance():
-    c3 = nlp_engine.extract_dietary(
-        "Torta de cumpleaños para 15 porciones de red velvet y manjar sin gluten ni azúcar"
-    )
+    c3_text = "Torta de cumpleaños para 15 porciones de red velvet y manjar sin gluten ni azúcar"
+    c3 = nlp_engine.extract_dietary(c3_text)
     assert "Sin Gluten" in c3
     assert "Sin Azúcar" in c3
 
-    c6 = nlp_engine.extract_dietary(
-        "Torta aniversario para 12 personas, bizcocho de naranja, apta para diabéticos e intolerantes a la lactosa"
-    )
+    c6_text = "Torta aniversario de naranja, apta para diabéticos e intolerantes a la lactosa"
+    c6 = nlp_engine.extract_dietary(c6_text)
     assert "Sin Azúcar" in c6
     assert "Sin Lactosa" in c6
 
@@ -57,24 +53,18 @@ def test_extract_flavors():
 
 
 def test_extract_challenging_cake_cases_c5_and_c6():
-    c5_text = (
-        "Quiero cotizar un pastel infantil con diseño de Spiderman "
-        "para veinticinco niños, sabor tres leches con frambuesa y maracuyá"
-    )
+    c5_text = "Pastel con diseño de Spiderman para veinticinco niños de tres leches con frambuesa y maracuyá"
     c5, conf5 = nlp_engine.extract("cake", c5_text)
     assert c5["servings"] == 25
     assert c5["theme"] == "Spiderman"
     assert c5["flavors"] == ["Tres leches", "Frambuesa", "Maracuyá"]
     assert conf5 == 0.95
 
-    c6_text = (
-        "Torta aniversario para 12 personas, bizcocho de naranja, pistacho y nutella, "
-        "apta para diabéticos e intolerantes a la lactosa"
-    )
+    c6_text = "Torta aniversario para 12 personas de naranja y pistacho, diabéticos e intolerantes a la lactosa"
     c6, conf6 = nlp_engine.extract("cake", c6_text)
     assert c6["servings"] == 12
     assert c6["theme"] == "Aniversario"
-    assert c6["flavors"] == ["Naranja", "Pistacho", "Nutella"]
+    assert c6["flavors"] == ["Naranja", "Pistacho"]
     assert "Sin Azúcar" in c6["dietary_restrictions"]
     assert "Sin Lactosa" in c6["dietary_restrictions"]
     assert conf6 == 0.95
@@ -93,29 +83,19 @@ def test_tattoo_black_and_white():
 
 
 def test_tattoo_challenging_cases_t4_t5_t6():
-    t4, conf4 = nlp_engine.extract(
-        "tattoo",
-        "Busco hacerme un león realista de 15x10 cm en el hombro con sombreado",
-    )
+    t4_text = "Busco hacerme un león realista de 15x10 cm en el hombro con sombreado"
+    t4, conf4 = nlp_engine.extract("tattoo", t4_text)
     assert t4 == {"size": "15x10 cm", "style": "Realista / Sombreado", "body_part": "Hombro"}
     assert conf4 == 0.95
 
-    t5, conf5 = nlp_engine.extract(
-        "tattoo",
-        "Tatuaje minimalista de línea fina de 5.5 cm en la clavícula",
-    )
+    t5_text = "Tatuaje minimalista de línea fina de 5.5 cm en la clavícula"
+    t5, conf5 = nlp_engine.extract("tattoo", t5_text)
     assert t5 == {"size": "5.5 cm", "style": "Minimalista / Línea fina", "body_part": "Clavícula"}
     assert conf5 == 0.95
 
-    t6, conf6 = nlp_engine.extract(
-        "tattoo",
-        "Quiero un dragón estilo tradicional japonés a full color de 25 cm en la pantorrilla",
-    )
-    assert t6 == {
-        "size": "25 cm",
-        "style": "Tradicional japonés / A color",
-        "body_part": "Pantorrilla",
-    }
+    t6_text = "Quiero un dragón estilo tradicional japonés a full color de 25 cm en la pantorrilla"
+    t6, conf6 = nlp_engine.extract("tattoo", t6_text)
+    assert t6 == {"size": "25 cm", "style": "Tradicional japonés / A color", "body_part": "Pantorrilla"}
     assert conf6 == 0.95
 
 

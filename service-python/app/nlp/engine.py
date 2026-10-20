@@ -169,10 +169,8 @@ BODY_PARTS_CATALOG: list[tuple[tuple[str, ...], str]] = [
 ]
 
 TATTOO_ART_STYLES: list[tuple[tuple[str, ...], str]] = [
-    (
-        ("tradicional japones", "tradicional japonés", "irezumi", "oriental", "japones", "japonés"),
-        "Tradicional japonés",
-    ),
+    (("tradicional japones", "tradicional japonés", "irezumi", "oriental"), "Tradicional japonés"),
+    (("japones", "japonés"), "Tradicional japonés"),
     (("neotradicional", "neo tradicional", "neo-tradicional"), "Neotradicional"),
     (("tradicional", "old school", "clasico", "clásico"), "Tradicional"),
     (("realista", "realismo", "microrealismo", "hiperrealista", "hiperrealismo"), "Realista"),
@@ -186,6 +184,64 @@ TATTOO_ART_STYLES: list[tuple[tuple[str, ...], str]] = [
     (("gotico", "gótico", "darkwork", "ignorant"), "Gótico"),
     (("lettering", "caligrafia", "caligrafía", "frase"), "Lettering"),
 ]
+
+THEME_STOP_WORDS = (
+    "para",
+    "con",
+    "sabor",
+    "sabores",
+    "rellena",
+    "relleno",
+    "bizcocho",
+    "cubierta",
+    "decorada",
+    "decorado",
+    "sin",
+    "apta",
+    "apto",
+    "libre",
+)
+
+LACTOSE_FREE_TERMS = (
+    "sin lactosa",
+    "sin leche",
+    "deslactosad",
+    "libre de lactosa",
+    "intolerante a la lactosa",
+    "intolerantes a la lactosa",
+    "intolerancia a la lactosa",
+    "sin lácteos",
+    "sin lacteos",
+)
+
+GLUTEN_FREE_TERMS = (
+    "sin gluten",
+    "celiac",
+    "celíac",
+    "libre de gluten",
+    "gluten free",
+    "sin tacc",
+    "intolerante al gluten",
+    "intolerantes al gluten",
+)
+
+SUGAR_FREE_TERMS = (
+    "sin azúcar",
+    "sin azucar",
+    "diabétic",
+    "diabetic",
+    "libre de azúcar",
+    "libre de azucar",
+    "cero azúcar",
+    "cero azucar",
+    "0 azúcar",
+    "0 azucar",
+    "endulzada con stevia",
+    "endulzada con alulosa",
+    "con stevia",
+    "con alulosa",
+    "keto",
+)
 
 CAKE_THEME_EN: dict[str, str] = {
     "boda": "wedding",
@@ -354,10 +410,8 @@ class AdvancedNLPEngine:
 
         # 2. Número compuesto en palabras ("treinta y cinco personas", "ciento veinte invitados")
         tens_words = "treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|ciento"
-        compound_match = re.search(
-            rf"\b({tens_words})\s+(?:y\s+)?([a-záéíóúñ]+)\s+(?:{nouns_pattern})\b",
-            lower,
-        )
+        compound_re = rf"\b({tens_words})\s+(?:y\s+)?([a-záéíóúñ]+)\s+(?:{nouns_pattern})\b"
+        compound_match = re.search(compound_re, lower)
         if compound_match:
             tens = SPANISH_NUMBERS.get(compound_match.group(1), 0)
             units = SPANISH_NUMBERS.get(compound_match.group(2), 0)
@@ -386,24 +440,15 @@ class AdvancedNLPEngine:
         lower = text.lower()
 
         # 1. Frase explícita de temática/diseño/motivo acotada antes de conectores de relleno/porciones
-        stop_words = (
-            r"para|con|sabor|sabores|rellen[ao]|bizcocho|cubierta|decorad[ao]"
-            r"|de\s+\d+|sin\s+|apta|apto|libre|que\s+|y\s+sabor|y\s+rellen"
-        )
-        explicit_pattern = (
-            r"(?:tem[aá]tica|dise[ñn]o|motivo|inspirad[ao]\s+en|ambientad[ao]\s+en|personajes?\s+de|estilo)\s+"
-            r"(?:de\s+|del\s+|la\s+|el\s+|los\s+|las\s+)?"
-            r"([a-z0-9áéíóúñü ]+?)"
-            rf"(?=\s+(?:{stop_words})|[,.;:!?\n]|$)"
-        )
+        stops = "|".join(THEME_STOP_WORDS) + r"|de\s+\d+|que\s+|y\s+sabor|y\s+rellen"
+        triggers = r"tem[aá]tica|dise[ñn]o|motivo|inspirad[ao]\s+en|ambientad[ao]\s+en|personajes?\s+de|estilo"
+        articles = r"de\s+|del\s+|la\s+|el\s+|los\s+|las\s+"
+        explicit_pattern = rf"(?:{triggers})\s+(?:{articles})?([a-z0-9áéíóúñü ]+?)(?=\s+(?:{stops})|[,.;:!?\n]|$)"
         match = re.search(explicit_pattern, lower)
         if match:
             candidate = match.group(1).strip()
-            flavor_tail = (
-                r"\s+de\s+(?:chocolate|vainilla|manjar|l[uú]cuma|frutilla|fresa"
-                r"|naranja|lim[oó]n|coco|red\s+velvet|tres\s+leches).*$"
-            )
-            candidate = re.sub(flavor_tail, "", candidate).strip()
+            flavors_re = r"chocolate|vainilla|manjar|l[uú]cuma|frutilla|fresa|naranja|lim[oó]n|coco|red\s+velvet"
+            candidate = re.sub(rf"\s+de\s+(?:{flavors_re}|tres\s+leches).*$", "", candidate).strip()
             if candidate and candidate not in ("torta", "pastel", "queque"):
                 return candidate.title()
 
@@ -420,80 +465,24 @@ class AdvancedNLPEngine:
         restrictions: list[str] = []
 
         # Subfrases introducidas por "sin ...", "libre de ...", "intolerante(s) a ...", "alérgico(s) a ..."
-        negation_triggers = (
-            r"(?:sin|libre\s+de|intolerantes?\s+a(?:\s+la|\s+el|\s+los)?"
-            r"|intolerancia\s+a(?:\s+la|\s+el)?|al[eé]rgicos?\s+a(?:\s+la|\s+el)?|cero|0%?)"
-        )
+        intol_re = r"intolerantes?\s+a(?:\s+la|\s+el|\s+los)?|intolerancia\s+a(?:\s+la|\s+el)?"
+        alerg_re = r"al[eé]rgicos?\s+a(?:\s+la|\s+el)?|cero|0%?"
+        negation_triggers = rf"(?:sin|libre\s+de|{intol_re}|{alerg_re})"
         negated_clauses = " ".join(re.findall(rf"{negation_triggers}\s+([^,.;:!?\n]+)", lower))
 
         if any(w in lower for w in ("vegana", "vegano", "vegan", "plant based", "100% vegetal")):
             restrictions.append("Vegana")
 
-        if (
-            any(
-                w in lower
-                for w in (
-                    "sin lactosa",
-                    "sin leche",
-                    "deslactosad",
-                    "libre de lactosa",
-                    "intolerante a la lactosa",
-                    "intolerantes a la lactosa",
-                    "intolerancia a la lactosa",
-                    "sin lácteos",
-                    "sin lacteos",
-                )
-            )
-            or "lactosa" in negated_clauses
-            or "leche" in negated_clauses
-            or "lácteos" in negated_clauses
-            or "lacteos" in negated_clauses
-        ):
+        lactose_negated = any(w in negated_clauses for w in ("lactosa", "leche", "lácteos", "lacteos"))
+        if any(w in lower for w in LACTOSE_FREE_TERMS) or lactose_negated:
             restrictions.append("Sin Lactosa")
 
-        if (
-            any(
-                w in lower
-                for w in (
-                    "sin gluten",
-                    "celiac",
-                    "celíac",
-                    "libre de gluten",
-                    "gluten free",
-                    "sin tacc",
-                    "intolerante al gluten",
-                    "intolerantes al gluten",
-                )
-            )
-            or "gluten" in negated_clauses
-            or "trigo" in negated_clauses
-        ):
+        gluten_negated = any(w in negated_clauses for w in ("gluten", "trigo"))
+        if any(w in lower for w in GLUTEN_FREE_TERMS) or gluten_negated:
             restrictions.append("Sin Gluten")
 
-        if (
-            any(
-                w in lower
-                for w in (
-                    "sin azúcar",
-                    "sin azucar",
-                    "diabétic",
-                    "diabetic",
-                    "libre de azúcar",
-                    "libre de azucar",
-                    "cero azúcar",
-                    "cero azucar",
-                    "0 azúcar",
-                    "0 azucar",
-                    "endulzada con stevia",
-                    "endulzada con alulosa",
-                    "con stevia",
-                    "con alulosa",
-                    "keto",
-                )
-            )
-            or "azúcar" in negated_clauses
-            or "azucar" in negated_clauses
-        ):
+        sugar_negated = any(w in negated_clauses for w in ("azúcar", "azucar"))
+        if any(w in lower for w in SUGAR_FREE_TERMS) or sugar_negated:
             restrictions.append("Sin Azúcar")
 
         return restrictions
@@ -595,12 +584,10 @@ class AdvancedNLPEngine:
                         matched_styles.append(canonical)
                     break
 
-        has_color = any(w in lower for w in ("a color", "full color", "colorido", "en color", "colores")) or (
-            "color" in lower and "sin color" not in lower
-        )
-        has_bw = any(
-            w in lower for w in ("blanco y negro", "black and grey", "black & grey", "escala de grises", "en negro")
-        )
+        color_words = ("a color", "full color", "colorido", "en color", "colores")
+        has_color = any(w in lower for w in color_words) or ("color" in lower and "sin color" not in lower)
+        bw_words = ("blanco y negro", "black and grey", "black & grey", "escala de grises", "en negro")
+        has_bw = any(w in lower for w in bw_words)
         has_shading = any(w in lower for w in ("sombreado", "sombras", "sombra"))
 
         if not matched_styles:

@@ -52,3 +52,14 @@ Publicar el tag/release sobre el SHA corregido, con sus pruebas aprobadas y evid
 ## Trazabilidad de participación
 
 El historial ya registra aportes de Ferfishy, Joshua/Joshua Villavicencio y German-Oses. Ejemplos: `968e353` (ajustes Python), `fa9b1a0` (integración de documentación) y `8ed5df2` (enlace al prototipo). El equipo debe explicar sus aportes reales durante la demostración; esta guía no asigna trabajo ni participación no acreditados.
+
+## Secuencia que realiza el equipo para publicar
+
+1. Revisar las correcciones locales y subir la rama `ep2-integracion-web` (`git push origin ep2-integracion-web`). Las correcciones finales del pipeline y de dependencias deben incluirse; el primer commit de esta revisión no contiene esos últimos ajustes.
+2. Esperar que la ejecución nueva de la PR #14 apruebe todos los controles de CI. No reutilizar la ejecución anterior fallida ni una ejecución de EP1.
+3. Habilitar el proyecto cloud siguiendo `staging.md`, configurar el ambiente `staging` y revisar los recursos/costos.
+4. Integrar la PR en `main` y comprobar el despliegue automático, su URL, SHA y el artefacto `ep2-staging-evidence` con recuperación real.
+5. En GitHub, ir a Releases > Draft a new release. Crear `v0.2.0-ep2` sobre el commit corregido de `main`, incluir el enlace al staging y a la ejecución aprobada. Publicar solo cuando esa versión funcione.
+6. Entregar el enlace de la release, repositorio, staging, tablero y Figma junto con la presentación y participación del equipo. No hace falta subir un ZIP adicional salvo indicación docente.
+
+Estas instrucciones no sustituyen la configuración cloud ni una demostración real.

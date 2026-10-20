@@ -31,6 +31,7 @@ export class HealthController {
 
     const body = {
       status: database === 'up' ? 'ok' : 'error',
+      revision: process.env.APP_REVISION ?? 'local',
       timestamp: new Date().toISOString(),
       correlationId: getCurrentCorrelationId(),
       services: { nestjs: 'up', database, pythonService },

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, retry } from 'rxjs';
-import { Domain } from '../common/constants/domains';
+import { Domain, SUPPORTED_DOMAINS } from '../common/constants/domains';
 import { getCurrentCorrelationId } from '../common/interceptors/correlation-logging.interceptor';
 
 export interface WebReferenceResult {
@@ -20,6 +20,7 @@ export interface ExtractionMetaResult {
   query_used: string;
   raw_count: number;
   valid_count: number;
+  returned_count: number;
   invalid_dropped: number;
   duplicates_removed: number;
   cache_hit: boolean;
@@ -44,6 +45,7 @@ export interface StructuredOrderResult {
 @Injectable()
 export class NlpService {
   private readonly logger = new Logger(NlpService.name);
+  private identityToken?: { value: string; expiresAt: number };
 
   constructor(
     private readonly httpService: HttpService,
@@ -57,9 +59,32 @@ export class NlpService {
     );
   }
 
-  private buildHeaders(): Record<string, string> {
+  private async buildHeaders(): Promise<Record<string, string>> {
     const correlationId = getCurrentCorrelationId();
-    return correlationId ? { 'X-Correlation-Id': correlationId } : {};
+    const headers: Record<string, string> = correlationId
+      ? { 'X-Correlation-Id': correlationId }
+      : {};
+    const audience = this.configService.get<string>('PYTHON_AUTH_AUDIENCE');
+    if (audience) {
+      if (!this.identityToken || this.identityToken.expiresAt <= Date.now()) {
+        const response = await fetch(
+          'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity' +
+            `?audience=${encodeURIComponent(audience)}&format=full`,
+          {
+            headers: { 'Metadata-Flavor': 'Google' },
+            signal: AbortSignal.timeout(3000),
+          },
+        );
+        if (!response.ok)
+          throw new Error('No se pudo autenticar con el servicio Python');
+        this.identityToken = {
+          value: await response.text(),
+          expiresAt: Date.now() + 300000,
+        };
+      }
+      headers.Authorization = `Bearer ${this.identityToken.value}`;
+    }
+    return headers;
   }
 
   async structureOrder(
@@ -67,22 +92,27 @@ export class NlpService {
     domain: Domain,
   ): Promise<StructuredOrderResult> {
     try {
+      const headers = await this.buildHeaders();
       const response = await firstValueFrom(
         this.httpService
           .post<StructuredOrderResult>(
             `${this.baseUrl}/api/v1/nlp/structure-order`,
             { raw_text: rawText, domain },
-            { timeout: 10000, headers: this.buildHeaders() },
+            { timeout: 10000, headers },
           )
           .pipe(retry({ count: 1, delay: 150 })),
       );
-      if (!this.isValidResult(response.data)) {
+      if (
+        !this.isValidResult(response.data) ||
+        response.data.domain !== domain ||
+        response.data.raw_text !== rawText
+      ) {
         throw new Error('Respuesta del servicio NLP con formato inválido');
       }
       return response.data;
     } catch (error) {
       this.logger.warn(
-        `Servicio NLP no disponible, usando respuesta degradada: ${(error as Error).message}`,
+        `Servicio NLP no disponible, usando respuesta degradada: ${(error as Error).name}`,
       );
       return {
         raw_text: rawText,
@@ -99,7 +129,7 @@ export class NlpService {
       const response = await firstValueFrom(
         this.httpService.get<Record<string, unknown>>(
           `${this.baseUrl}/api/v1/nlp/metrics`,
-          { timeout: 4000, headers: this.buildHeaders() },
+          { timeout: 4000, headers: await this.buildHeaders() },
         ),
       );
       return response.data;
@@ -116,7 +146,7 @@ export class NlpService {
       const response = await firstValueFrom(
         this.httpService.get(`${this.baseUrl}/health`, {
           timeout: 3000,
-          headers: this.buildHeaders(),
+          headers: await this.buildHeaders(),
         }),
       );
       return response.data?.status === 'ok';
@@ -129,9 +159,62 @@ export class NlpService {
     const d = data as StructuredOrderResult;
     return (
       !!d &&
+      typeof d.raw_text === 'string' &&
+      SUPPORTED_DOMAINS.includes(d.domain) &&
       typeof d.entities === 'object' &&
       d.entities !== null &&
-      Array.isArray(d.web_references)
+      !Array.isArray(d.entities) &&
+      typeof d.entities.confidence_score === 'number' &&
+      Number.isFinite(d.entities.confidence_score) &&
+      d.entities.confidence_score >= 0 &&
+      d.entities.confidence_score <= 1 &&
+      Array.isArray(d.web_references) &&
+      d.web_references.length <= 4 &&
+      d.web_references.every(
+        (ref) =>
+          !!ref &&
+          typeof ref.title === 'string' &&
+          typeof ref.source === 'string' &&
+          this.isHttpsUrl(ref.image_url) &&
+          (ref.source_url == null || this.isHttpsUrl(ref.source_url)) &&
+          (ref.retrieved_at == null ||
+            Number.isFinite(Date.parse(ref.retrieved_at))),
+      ) &&
+      (d.extraction_meta === undefined ||
+        (!!d.extraction_meta &&
+          typeof d.extraction_meta.query_used === 'string' &&
+          typeof d.extraction_meta.cache_hit === 'boolean' &&
+          typeof d.extraction_meta.fallback_used === 'boolean' &&
+          [
+            'raw_count',
+            'valid_count',
+            'returned_count',
+            'invalid_dropped',
+            'duplicates_removed',
+            'latency_ms',
+          ].every((key) => {
+            const value = (
+              d.extraction_meta as unknown as Record<string, unknown>
+            )[key];
+            return (
+              typeof value === 'number' && Number.isFinite(value) && value >= 0
+            );
+          })))
     );
+  }
+
+  private isHttpsUrl(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    try {
+      const url = new URL(value);
+      return (
+        url.protocol === 'https:' &&
+        !!url.hostname &&
+        !url.username &&
+        !url.password
+      );
+    } catch {
+      return false;
+    }
   }
 }

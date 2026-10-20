@@ -225,12 +225,17 @@ const PLACEHOLDERS: Record<Domain, string> = {
                       </ion-list>
                     </form>
 
+                    @if (data.extraction_meta?.fallback_used) {
+                      <ion-text color="warning">
+                        <p>No se pudieron recuperar referencias de la fuente externa. Puedes continuar con tu pedido sin imágenes.</p>
+                      </ion-text>
+                    }
                     @if (data.web_references.length) {
                       <h3>Referencias visuales encontradas en la Web</h3>
                       @if (data.extraction_meta; as meta) {
                         <p class="muted">
                           <ion-note>
-                            Consulta: "{{ meta.query_used }}" · {{ meta.valid_count }} válidas de {{ meta.raw_count }} ({{ meta.duplicates_removed }} duplicadas filtradas) · {{ meta.latency_ms }} ms
+                            Consulta: "{{ meta.query_used }}" · {{ meta.valid_count }} válidas de {{ meta.raw_count }} · {{ meta.returned_count }} mostradas ({{ meta.duplicates_removed }} duplicadas filtradas) · {{ meta.latency_ms }} ms
                             {{ meta.cache_hit ? '· caché TTL' : '' }}
                           </ion-note>
                         </p>
@@ -242,6 +247,11 @@ const PLACEHOLDERS: Record<Domain, string> = {
                             <figcaption>
                               {{ ref.title }}<br />
                               <ion-note>{{ ref.source }}</ion-note>
+                              <br />
+                              <span>{{ ref.creator || 'Autor no informado' }} · {{ ref.license || 'Licencia no informada' }}</span>
+                              @if (ref.source_url) {
+                                <br /><a [href]="ref.source_url" target="_blank" rel="noopener noreferrer">Ver obra original y condiciones de uso</a>
+                              }
                             </figcaption>
                           </figure>
                         }

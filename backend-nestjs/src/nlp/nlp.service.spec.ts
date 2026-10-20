@@ -3,7 +3,11 @@ import { NlpService } from './nlp.service';
 
 describe('NlpService', () => {
   const http = { post: jest.fn(), get: jest.fn() };
-  const config = { get: jest.fn(() => 'http://python:8000') };
+  const config = {
+    get: jest.fn((key: string) =>
+      key === 'PYTHON_SERVICE_URL' ? 'http://python:8000' : undefined,
+    ),
+  };
   const service = new NlpService(http as any, config as any);
 
   beforeEach(() => jest.clearAllMocks());
@@ -59,6 +63,82 @@ describe('NlpService', () => {
   it('trata un contrato inválido como fallo', async () => {
     http.post.mockReturnValue(of({ data: { foo: 'bar' } }));
     expect((await service.structureOrder('torta', 'cake')).fallback).toBe(true);
+  });
+
+  it.each([
+    {
+      raw_text: 'torta',
+      domain: 'cake',
+      entities: { confidence_score: 2 },
+      web_references: [],
+    },
+    { raw_text: 'torta', domain: 'cake', entities: [], web_references: [] },
+    {
+      raw_text: 'otro pedido',
+      domain: 'cake',
+      entities: { confidence_score: 0.9 },
+      web_references: [],
+    },
+    {
+      raw_text: 'torta',
+      domain: 'tattoo',
+      entities: { confidence_score: 0.9 },
+      web_references: [],
+    },
+    {
+      raw_text: 'torta',
+      domain: 'cake',
+      entities: { confidence_score: 0.9 },
+      web_references: [null],
+    },
+    {
+      raw_text: 'torta',
+      domain: 'cake',
+      entities: { confidence_score: 0.9 },
+      web_references: [
+        {
+          title: 'Referencia',
+          source: 'web',
+          image_url: 'javascript:alert(1)',
+        },
+      ],
+    },
+  ])(
+    'rechaza respuestas corruptas antes de enviarlas al frontend (%j)',
+    async (data) => {
+      http.post.mockReturnValue(of({ data }));
+      expect((await service.structureOrder('torta', 'cake')).fallback).toBe(
+        true,
+      );
+    },
+  );
+
+  it('incluye identidad de servicio en Cloud Run y reutiliza el token', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      text: async () => 'test-identity-token',
+    } as Response);
+    const cloudConfig = {
+      get: (key: string) =>
+        ['PYTHON_SERVICE_URL', 'PYTHON_AUTH_AUDIENCE'].includes(key)
+          ? 'https://nlp.example.org'
+          : undefined,
+    };
+    const cloudService = new NlpService(http as any, cloudConfig as any);
+    http.get.mockReturnValue(of({ data: { status: 'ok' } }));
+    try {
+      expect(await cloudService.isHealthy()).toBe(true);
+      expect(await cloudService.isHealthy()).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(http.get).toHaveBeenCalledWith(
+        'https://nlp.example.org/health',
+        expect.objectContaining({
+          headers: { Authorization: 'Bearer test-identity-token' },
+        }),
+      );
+    } finally {
+      fetchMock.mockRestore();
+    }
   });
 
   it('obtiene métricas del servicio Python o responde unavailable si falla', async () => {

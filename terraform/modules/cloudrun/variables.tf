@@ -2,6 +2,15 @@ variable "service_name" {
   type = string
 }
 
+variable "project_id" {
+  type = string
+}
+
+variable "memory" {
+  type    = string
+  default = "512Mi"
+}
+
 variable "region" {
   type = string
 }

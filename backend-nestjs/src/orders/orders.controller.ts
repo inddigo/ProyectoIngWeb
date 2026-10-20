@@ -48,8 +48,11 @@ export class OrdersController {
   /** Consulta referencias visuales indexadas en PostgreSQL con metadatos de procedencia. */
   @Get('web-references')
   @UseGuards(JwtAuthGuard)
-  searchWebReferences(@Query() query: SearchWebReferencesQuery) {
-    return this.ordersService.searchWebReferences(query);
+  searchWebReferences(
+    @Query() query: SearchWebReferencesQuery,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.ordersService.searchWebReferences(query, user);
   }
 
   @Post()

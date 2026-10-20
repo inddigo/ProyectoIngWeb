@@ -1,5 +1,7 @@
 """Pruebas unitarias para extracción, validación, limpieza, normalización, deduplicación y caché web."""
 
+import asyncio
+
 from app.services.scraper import (
     WebReferenceScraper,
     clean_and_normalize_text,
@@ -34,7 +36,7 @@ def test_normalize_url_rejects_insecure_or_malformed_urls():
 def test_normalize_license_standardizes_codes():
     assert normalize_license("by-sa", "4.0") == "CC BY-SA 4.0"
     assert normalize_license("cc0", "1.0") == "CC0 1.0"
-    assert normalize_license(None) == "CC-BY"
+    assert normalize_license(None) == "Licencia no informada"
 
 
 def test_process_raw_results_deduplicates_and_filters_invalid():
@@ -98,3 +100,40 @@ def test_process_raw_results_deduplicates_and_filters_invalid():
     assert metrics["duplicates_removed"] == 2
     assert metrics["valid_records_rate_pct"] == 40.0
     assert metrics["duplicate_rate_pct"] == 40.0
+
+
+def test_quality_metrics_inspect_entire_batch_before_limiting_display():
+    scraper = WebReferenceScraper()
+    raw = [{"title": f"Reference {i}", "thumbnail": f"https://example.org/{i}.jpg"} for i in range(12)]
+    refs, stats = scraper.process_raw_results(raw, "cake")
+    assert len(refs) == stats["returned_count"] == 4
+    assert stats["valid_count"] == stats["raw_count"] == 12
+    assert scraper.get_metrics()["valid_records_rate_pct"] == 100.0
+    assert scraper.get_metrics()["valid_records_kept"] == 4
+    # A duplicate and invalid URL beyond the display limit must still be counted.
+    _, stats = scraper.process_raw_results(raw + [raw[0], {"thumbnail": "http://example.org/a"}], "cake")
+    assert stats["valid_count"] == 12
+    assert stats["duplicates_removed"] == stats["invalid_dropped"] == 1
+
+
+def test_metrics_do_not_claim_quality_without_observations():
+    assert WebReferenceScraper().get_metrics()["valid_records_rate_pct"] is None
+
+
+def test_cache_expires_and_refreshes_without_counting_cache_as_new_data(monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr("app.services.scraper.time.monotonic", lambda: clock[0])
+    scraper = WebReferenceScraper(ttl_seconds=10)
+
+    async def scenario():
+        first, first_meta = await scraper.get_references_with_meta("cake", "birthday")
+        cached, cached_meta = await scraper.get_references_with_meta("cake", "birthday")
+        assert not first_meta["fallback_used"]
+        assert cached_meta["cache_hit"] and first == cached
+        assert scraper.get_metrics()["raw_records_seen"] == 1
+        clock[0] = 111.0
+        _, refreshed_meta = await scraper.get_references_with_meta("cake", "birthday")
+        assert not refreshed_meta["cache_hit"]
+        assert scraper.get_metrics()["raw_records_seen"] == 2
+
+    asyncio.run(scenario())

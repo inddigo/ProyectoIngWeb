@@ -8,7 +8,14 @@ def offline_scraper(monkeypatch):
     """Evita llamadas reales a Openverse durante las pruebas."""
 
     async def fake_search(self, search):
-        return [{"title": f"ref {search}", "image_url": "https://example.org/a.jpg", "source": "test"}]
+        return self.process_raw_results(
+            [{"title": f"ref {search}", "thumbnail": "https://example.org/a.jpg", "source": "test", "license": "by"}],
+            search,
+        )
 
     monkeypatch.setattr(scraper.WebReferenceScraper, "_search_openverse", fake_search)
-    scraper.web_scraper._cache.clear()
+    monkeypatch.setattr(scraper, "web_scraper", scraper.WebReferenceScraper())
+    from app import api, main
+
+    monkeypatch.setattr(api, "web_scraper", scraper.web_scraper)
+    monkeypatch.setattr(main, "web_scraper", scraper.web_scraper)

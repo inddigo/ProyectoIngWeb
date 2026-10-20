@@ -26,6 +26,8 @@ de cotización (cobrar bajo el costo real o perder clientes por demoras).
 
 ## 4. Continuidad y correcciones incorporadas desde la EP1
 
+Esta trazabilidad registra brechas técnicas detectadas en el repositorio. El equipo debe contrastarla con la retroalimentación docente original, que no se adjuntó a esta revisión.
+
 | Observación / Brecha detectada al cierre de EP1 | Acción técnica implementada en EP2 | Evidencia en el repositorio |
 |---|---|---|
 | **Caché de referencias web sin expiración ni límite** (`dict` en memoria ilimitado) | Se implementó `CacheEntry` con TTL configurable (`SCRAPER_CACHE_TTL_SECONDS=3600`) y tamaño máximo (`SCRAPER_MAX_CACHE_ENTRIES=128`) con desalojo del más antiguo. | [`service-python/app/services/scraper.py`](../service-python/app/services/scraper.py) |
@@ -69,7 +71,7 @@ El pipeline implementado en [`service-python/app/services/scraper.py`](../servic
    - **En Python (`process_raw_results`):** Descarta candidatos con la misma URL canónica o el mismo título normalizado dentro del lote antes de seleccionar las `MAX_RESULTS=4` referencias finales.
    - **En NestJS / PostgreSQL (`OrdersService.create` + Prisma):** Deduplica por `imageUrl` antes de insertar y aplica la restricción única `UNIQUE (order_id, image_url)` en la tabla `web_references`.
 6. **Manejo de errores e indisponibilidad (Degradación controlada):**
-   - Si Openverse falla (timeout, error HTTP 429/5xx, error de red o lista vacía), `WebReferenceScraper` registra el evento estructurado, incrementa `fallback_count` y retorna referencias de respaldo verificadas (`fallback_used: true`) sin interrumpir el flujo del usuario.
+   - Si Openverse falla (timeout, error HTTP 429/5xx, error de red o lista vacía), `WebReferenceScraper` registra el evento estructurado, incrementa `fallback_count` y retorna una lista vacía de referencias (`fallback_used: true`) sin interrumpir el flujo del usuario.
    - Si el servicio Python completo no responde tras 1 reintento automático (`retry({ count: 1, delay: 150 })`) y timeout de 10 s, NestJS devuelve `fallback: true` para que el cliente complete el formulario manualmente.
 
 ---
@@ -80,9 +82,9 @@ Para evaluar cuantitativamente la calidad de los datos recuperados y del procesa
 
 | Métrica | Fórmula / Definición | Justificación para el proyecto | Resultado reproducible (Benchmark / Pruebas) |
 |---|---|---|---|
-| **1. Porcentaje de registros válidos (`valid_records_rate_pct`)** | $\frac{\text{Registros válidos conservados}}{\text{Registros crudos inspeccionados}} \times 100$ | Mide qué proporción de los resultados devueltos por la fuente externa cumple con HTTPS válido, esquema íntegro y ausencia de duplicados. | **100 %** en respuestas estándar de Openverse; **40 %** en el lote de estrés con ruido/duplicados inyectados (`test_scraper.py`). |
+| **1. Porcentaje de registros válidos (`valid_records_rate_pct`)** | $\frac{\text{Registros válidos conservados}}{\text{Registros crudos inspeccionados}} \times 100$ | Mide qué proporción de los resultados devueltos por la fuente externa cumple con HTTPS válido, esquema íntegro y ausencia de duplicados. | **100 %** en un lote reproducible de 12 registros válidos y únicos; **40 %** en el lote de estrés con ruido/duplicados inyectados (`test_scraper.py`). |
 | **2. Porcentaje de duplicados filtrados (`duplicate_rate_pct`)** | $\frac{\text{Duplicados eliminados}}{\text{Registros crudos inspeccionados}} \times 100$ | Evalúa la efectividad del filtro de deduplicación por URL canónica y título para no mostrar imágenes repetidas al cliente ni al pastelero/tatuador. | Detecta y filtra el **100 %** de duplicados por URL (`utm_*`) y título (`test_process_raw_results_deduplicates_and_filters_invalid`). |
-| **3. Tiempo de recuperación (`avg_latency_ms`)** | Latencia promedio de extremo a extremo en `get_references_with_meta` (ms) | Crítico para la experiencia interactiva del cliente al estructurar su pedido: debe mantenerse bajo el umbral de timeout (4000 ms) y ser `< 5 ms` en aciertos de caché. | **~350–650 ms** en consulta fría a Openverse; **< 1 ms** en acierto de caché TTL (`cache_hit: true`). |
+| **3. Tiempo de recuperación (`avg_latency_ms`)** | Latencia promedio de extremo a extremo en `get_references_with_meta` (ms) | Crítico para la experiencia interactiva del cliente al estructurar su pedido: debe mantenerse bajo el umbral de timeout (4000 ms) y ser `< 5 ms` en aciertos de caché. | Medición por ejecución con `latency_ms`; prueba determinista de caché y expiración. No hay medición de staging hasta habilitar el proyecto cloud. |
 | **4. Exactitud de extracción NLP (`entity_extraction_accuracy_pct`)** | $\frac{\text{Atributos extraídos correctamente}}{\text{Total de atributos esperados en el benchmark}} \times 100$ | La calidad de la consulta enviada a Openverse depende directamente de extraer bien la temática (`theme`) o estilo (`style`) junto con porciones/tamaño/sabores. | **100 % (21 / 21 campos)** sobre los 6 casos multirubro del conjunto `EVALUATION_BENCHMARK`. |
 
 ### Interpretación y limitaciones identificadas
@@ -107,3 +109,9 @@ De acuerdo con los requisitos de la EP2 (sección 24.2.8), a continuación se es
 | **8. ¿Qué riesgos de sesgo, privacidad o falta de transparencia existen y cómo se mitigan?** | - **Riesgo de sesgo de precios:** Si el cálculo se basara en una caja negra, podría subvalorar trabajos artesanales complejos (ej. alergias alimentarias o tatuajes a color). *Mitigación:* Fórmulas explícitas con desglose visible y edición libre por el profesional.<br/>- **Riesgo de alucinación o error de NLP:** Un mensaje ambiguo podría asignar 10 porciones por defecto cuando el cliente quería 50. *Mitigación:* Puntaje de confianza visible, alerta amarilla cuando `< 60%` y paso obligatorio de confirmación humana.<br/>- **Privacidad:** Minimización estricta en consultas a Openverse (solo se envían palabras clave de estilo/temática, nunca nombres, teléfonos ni el texto íntegro del cliente). |
 | **9. ¿Cómo se evaluará posteriormente la utilidad de la adaptación (Módulo 3)?** | Se evaluará comparando el flujo adaptativo (NLP + precarga de calculadora + estimación por reglas) frente a una **línea base no adaptativa** (ingreso manual desde cero) midiendo:<br/>1) **Tiempo promedio de creación y cotización de un pedido** (reducción esperada $> 50\%$).<br/>2) **Tasa de corrección de campos por el cliente** según nivel de `confidence_score`.<br/>3) **Desviación relativa** entre el precio sugerido por el motor adaptativo y el precio final enviado por el profesional. |
 
+
+## 9. Correcciones verificadas al cierre técnico
+
+La evaluación distingue `valid_count` (todos los registros únicos válidos del lote) de `returned_count` (hasta cuatro referencias mostradas). Sin observaciones, la tasa de calidad es `null`. No se asigna una licencia a registros que no la informan. Los temas libres permanecen internos; solo términos conocidos de un catálogo se envían a Openverse. Si falla la fuente no se inventan imágenes ni procedencias. La interfaz muestra autor, licencia y enlace original cuando existen.
+
+Estado y demostración: [entrega2.md](entrega2.md).

@@ -17,7 +17,8 @@ RUN apk upgrade --no-cache && apk add --no-cache openssl \
               /opt/yarn* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/dist ./dist
-COPY --chown=node:node package.json start.sh ./
+COPY --chown=node:node package.json ./
+COPY --chown=node:node --chmod=755 start.sh ./
 COPY --chown=node:node prisma ./prisma
 USER node
 EXPOSE 3000

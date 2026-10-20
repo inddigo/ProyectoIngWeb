@@ -19,12 +19,21 @@ echo "1. Salud de servicios y observabilidad (Correlation ID + métricas)"
 HEALTH=$(curl -sf -H 'X-Correlation-Id: smoke-health-001' "$BASE/health")
 echo "$HEALTH" | json "d['services']"
 check "correlationId propagado en /health" "$(echo "$HEALTH" | json "d.get('correlationId')")" "smoke-health-001"
+check "PostgreSQL disponible" "$(echo "$HEALTH" | json "d['services']['database']")" "up"
+check "Python disponible" "$(echo "$HEALTH" | json "d['services']['pythonService']")" "up"
+if [ -n "${EXPECTED_REVISION:-}" ]; then
+  check "revisión desplegada" "$(echo "$HEALTH" | json "d.get('revision')")" "$EXPECTED_REVISION"
+fi
 
 echo "2. Estructuración NLP y recuperación web (NestJS -> FastAPI -> Openverse)"
-STRUCT=$(post /api/v1/orders/nlp-structure '{"rawText":"Quiero una torta vegana de chocolate para 20 personas con temática de Batman","domain":"cake"}')
+STRUCT=$(post /api/v1/orders/nlp-structure '{"rawText":"Quiero una torta vegana de chocolate para 20 personas con temática de cumpleaños","domain":"cake"}')
 echo "$STRUCT" | json "d['entities']"
 check "porciones extraídas" "$(echo "$STRUCT" | json "d['entities']['servings']")" "20"
 check "metadatos de extracción presentes" "$(echo "$STRUCT" | json "'latency_ms' in d.get('extraction_meta', {})")" "True"
+if [ "${REQUIRE_REAL_WEB:-0}" = "1" ]; then
+  check "recuperación real sin respaldo" "$(echo "$STRUCT" | json "d['extraction_meta']['fallback_used']")" "False"
+  check "fuente real (sin fixture)" "$(echo "$STRUCT" | json "len(d['web_references']) > 0 and all(r['source'].startswith('Openverse / ') and 'fixture' not in r['source'].lower() for r in d['web_references'])")" "True"
+fi
 
 echo "3. Evaluación de información recuperada (endpoint de métricas)"
 METRICS=$(curl -sf "$BASE/api/v1/orders/nlp-metrics")
@@ -49,6 +58,7 @@ echo "  pedido $ORDER_ID"
 echo "6. Consulta de referencias web indexadas en PostgreSQL"
 INDEXED=$(curl -sf -H "Authorization: Bearer $CLIENT_TOKEN" "$BASE/api/v1/orders/web-references?domain=cake")
 check "referencias indexadas recuperables" "$(echo "$INDEXED" | json "len(d) >= 1")" "True"
+check "procedencia persistida" "$(echo "$INDEXED" | json "all(r.get('sourceUrl') and r.get('license') and r.get('retrievedAt') for r in d)")" "True"
 
 echo "7. Profesional cotiza"
 BAKER_TOKEN=$(post /auth/login "{\"email\":\"$BAKER_EMAIL\",\"password\":\"$BAKER_PASSWORD\"}" | json "d['access_token']")
@@ -62,5 +72,12 @@ STATUS=$(curl -sf -X PATCH -H 'Content-Type: application/json' -H "Authorization
   "$BASE/api/v1/orders/$ORDER_ID/status" -d '{"status":"ACCEPTED_BY_CLIENT"}' | json "d['status']")
 check "estado final" "$STATUS" "ACCEPTED_BY_CLIENT"
 
+if [ -n "${EVIDENCE_DIR:-}" ]; then
+  mkdir -p "$EVIDENCE_DIR"
+  printf '%s\n' "$HEALTH" > "$EVIDENCE_DIR/health.json"
+  printf '%s\n' "$STRUCT" > "$EVIDENCE_DIR/retrieval.json"
+  printf '%s\n' "$METRICS" > "$EVIDENCE_DIR/metrics.json"
+  echo "Evidencia guardada (sin tokens ni contraseñas)."
+fi
 echo "Flujo de extremo a extremo (EP2) completado."
 

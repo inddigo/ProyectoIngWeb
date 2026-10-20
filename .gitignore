@@ -19,6 +19,9 @@ coverage/
 !.env.example
 *.log
 .coverage
+terraform/backend.generated.tf
+*.tfplan
+gha-creds-*.json
 
 # Material del curso y configuración local de herramientas (no forman parte del proyecto)
 /*.pdf

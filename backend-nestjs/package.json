@@ -1,7 +1,7 @@
 {
   "name": "backend-nestjs",
   "version": "0.0.1",
-  "description": "Backend orquestador (API REST) de la plataforma de cotizaci\u00f3n inteligente",
+  "description": "Backend orquestador (API REST) de la plataforma de cotización inteligente",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
@@ -32,6 +32,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.2.6",
+    "@nestjs/swagger": "^11.4.7",
     "@prisma/client": "^6.19.0",
     "axios": "^1.7.7",
     "bcrypt": "^6.0.0",

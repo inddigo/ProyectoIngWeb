@@ -212,7 +212,14 @@ type Filter = OrderStatus | 'ALL';
                         @for (ref of order.webReferences; track ref.imageUrl) {
                           <figure>
                             <img [src]="ref.imageUrl" [alt]="ref.title" loading="lazy" />
-                            <figcaption>{{ ref.title }}</figcaption>
+                            <figcaption>
+                              {{ ref.title }}<br />
+                              {{ ref.creator || 'Autor no informado' }} · {{ ref.license || 'Licencia no informada' }}<br />
+                              {{ ref.source }}
+                              @if (ref.sourceUrl) {
+                                <br /><a [href]="ref.sourceUrl" target="_blank" rel="noopener noreferrer">Ver obra original y condiciones de uso</a>
+                              }
+                            </figcaption>
                           </figure>
                         }
                       </div>

@@ -84,6 +84,7 @@ class ExtractionMeta(BaseModel):
     query_used: str
     raw_count: int
     valid_count: int
+    returned_count: int
     invalid_dropped: int
     duplicates_removed: int
     cache_hit: bool

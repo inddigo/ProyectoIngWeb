@@ -1,0 +1,14 @@
+# Solo integración determinista. Staging utiliza Openverse real.
+services:
+  reference-fixture:
+    image: python:3.12-alpine
+    command: ["python", "/fixture/server.py"]
+    volumes:
+      - ./scripts/reference-fixture.py:/fixture/server.py:ro
+    networks: [backend]
+  python-service:
+    environment:
+      OPENVERSE_URL: http://reference-fixture:8090/
+    depends_on:
+      reference-fixture:
+        condition: service_started

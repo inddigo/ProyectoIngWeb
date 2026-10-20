@@ -87,7 +87,7 @@ def health_check() -> dict[str, Any]:
         "service": "service-python",
         "external_source": {
             "provider": "openverse",
-            "status": "degraded" if metrics["last_error"] and metrics["valid_records_kept"] == 0 else "ready",
+            "status": metrics["source_status"],
             "avg_latency_ms": metrics["avg_latency_ms"],
             "cache_entries": metrics["active_cache_entries"],
         },

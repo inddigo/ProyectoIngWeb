@@ -115,3 +115,14 @@ def test_build_search_query_produces_distinct_english_queries():
     t6_text = "Quiero un dragón estilo tradicional japonés a full color de 25 cm en la pantorrilla"
     t6_entities, _ = nlp_engine.extract("tattoo", t6_text)
     assert nlp_engine.build_search_query("tattoo", t6_text, t6_entities) == "dragon japanese"
+
+
+def test_external_query_never_includes_free_text_theme_or_contact_details():
+    for theme in ("Ana Perez 987654321", "ana@example.org", "Calle Ficticia 123", "Un nombre privado"):
+        text = f"Quiero una torta con temática de {theme} para 20 personas de chocolate"
+        entities, _ = nlp_engine.extract("cake", text)
+        assert nlp_engine.build_search_query("cake", text, entities) == "chocolate"
+    assert (
+        nlp_engine.build_search_query("cake", "", {"theme": "Ana Perez", "flavors": ["private@example.org"]})
+        == "chocolate"
+    )

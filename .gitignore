@@ -7,7 +7,7 @@ __pycache__/
 postgres_data/
 .angular/
 .agents/
-terraform/.terraform/
+**/.terraform/
 *.tfstate
 *.tfstate.backup
 coverage/

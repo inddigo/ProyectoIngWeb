@@ -113,32 +113,22 @@ describe('NlpService', () => {
     },
   );
 
-  it('incluye identidad de servicio en Cloud Run y reutiliza el token', async () => {
-    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
-      ok: true,
-      text: async () => 'test-identity-token',
-    } as Response);
-    const cloudConfig = {
+  it('autentica las llamadas al servicio Python con el secreto compartido', async () => {
+    const renderConfig = {
       get: (key: string) =>
-        ['PYTHON_SERVICE_URL', 'PYTHON_AUTH_AUDIENCE'].includes(key)
-          ? 'https://nlp.example.org'
-          : undefined,
+        key === 'PYTHON_SERVICE_TOKEN'
+          ? 'test-service-token'
+          : 'https://nlp.example.org',
     };
-    const cloudService = new NlpService(http as any, cloudConfig as any);
+    const renderService = new NlpService(http as any, renderConfig as any);
     http.get.mockReturnValue(of({ data: { status: 'ok' } }));
-    try {
-      expect(await cloudService.isHealthy()).toBe(true);
-      expect(await cloudService.isHealthy()).toBe(true);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(http.get).toHaveBeenCalledWith(
-        'https://nlp.example.org/health',
-        expect.objectContaining({
-          headers: { Authorization: 'Bearer test-identity-token' },
-        }),
-      );
-    } finally {
-      fetchMock.mockRestore();
-    }
+    expect(await renderService.isHealthy()).toBe(true);
+    expect(http.get).toHaveBeenCalledWith(
+      'https://nlp.example.org/health',
+      expect.objectContaining({
+        headers: { 'X-Service-Token': 'test-service-token' },
+      }),
+    );
   });
 
   it('obtiene métricas del servicio Python o responde unavailable si falla', async () => {

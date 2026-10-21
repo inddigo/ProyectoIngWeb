@@ -22,4 +22,4 @@ El formulario y la asistencia se adaptan al rubro y completitud. El profesional 
 
 ## Estado del despliegue
 
-La automatización prepara y despliega las imágenes verificadas, comprueba su SHA, salud y flujo real. La URL pública todavía depende de habilitar el proyecto GCP del equipo. Actualizar este estado con evidencia después del primer despliegue exitoso.
+La automatización valida el código y despliega el commit aprobado en Render Free, comprueba su SHA, salud y flujo real. La URL pública todavía depende de conectar las cuentas Render Free y Neon Free del equipo. Actualizar este estado con evidencia después del primer despliegue exitoso.

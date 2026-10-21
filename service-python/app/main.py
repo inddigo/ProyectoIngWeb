@@ -1,5 +1,7 @@
+import hmac
 import json
 import logging
+import os
 import time
 import uuid
 from datetime import UTC, datetime
@@ -37,6 +39,21 @@ app = FastAPI(
     description="Extrae atributos estructurados desde texto libre por rubro y obtiene referencias visuales de la Web.",
     version="1.2.0",
 )
+
+# Render Free usa HTTPS público entre servicios. La API NLP exige un secreto
+# compartido; /health permanece público para que el proveedor pueda comprobarla.
+SERVICE_TOKEN = os.environ.get("PYTHON_SERVICE_TOKEN", "")
+if os.environ.get("RENDER") == "true" and len(SERVICE_TOKEN) < 32:
+    raise RuntimeError("PYTHON_SERVICE_TOKEN debe contener al menos 32 caracteres en Render")
+
+
+@app.middleware("http")
+async def service_authentication(request: Request, call_next: Any) -> Response:
+    if request.url.path != "/health" and SERVICE_TOKEN:
+        supplied = request.headers.get("x-service-token", "")
+        if not hmac.compare_digest(supplied.encode(), SERVICE_TOKEN.encode()):
+            return JSONResponse(status_code=401, content={"detail": "No autorizado"})
+    return await call_next(request)
 
 
 @app.middleware("http")

@@ -109,3 +109,15 @@ def test_source_health_degrades_on_empty_timeout_and_recovers(monkeypatch):
     assert not body["extraction_meta"]["fallback_used"]
     assert client.get("/health").json()["external_source"]["status"] == "ready"
     assert scraper.web_scraper.get_metrics()["last_error"] is None
+
+
+def test_public_deployment_requires_service_token(monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "SERVICE_TOKEN", "test-token-with-at-least-32-characters")
+    assert client.get("/health").status_code == 200
+    assert client.get("/api/v1/nlp/metrics").status_code == 401
+    assert client.get("/api/v1/nlp/metrics", headers={"X-Service-Token": "incorrecto"}).status_code == 401
+    response = client.get("/api/v1/nlp/metrics", headers={"X-Service-Token": "test-token-with-at-least-32-characters"})
+    assert response.status_code == 200
+    assert "X-Correlation-Id" in response.headers

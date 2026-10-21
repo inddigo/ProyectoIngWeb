@@ -45,7 +45,6 @@ export interface StructuredOrderResult {
 @Injectable()
 export class NlpService {
   private readonly logger = new Logger(NlpService.name);
-  private identityToken?: { value: string; expiresAt: number };
 
   constructor(
     private readonly httpService: HttpService,
@@ -64,26 +63,8 @@ export class NlpService {
     const headers: Record<string, string> = correlationId
       ? { 'X-Correlation-Id': correlationId }
       : {};
-    const audience = this.configService.get<string>('PYTHON_AUTH_AUDIENCE');
-    if (audience) {
-      if (!this.identityToken || this.identityToken.expiresAt <= Date.now()) {
-        const response = await fetch(
-          'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity' +
-            `?audience=${encodeURIComponent(audience)}&format=full`,
-          {
-            headers: { 'Metadata-Flavor': 'Google' },
-            signal: AbortSignal.timeout(3000),
-          },
-        );
-        if (!response.ok)
-          throw new Error('No se pudo autenticar con el servicio Python');
-        this.identityToken = {
-          value: await response.text(),
-          expiresAt: Date.now() + 300000,
-        };
-      }
-      headers.Authorization = `Bearer ${this.identityToken.value}`;
-    }
+    const token = this.configService.get<string>('PYTHON_SERVICE_TOKEN');
+    if (token) headers['X-Service-Token'] = token;
     return headers;
   }
 

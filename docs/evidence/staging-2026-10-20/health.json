@@ -1,0 +1,1 @@
+{"status":"ok","revision":"6397324972fb8df737bc9a27b566f3e5173f9318","timestamp":"2026-10-21T01:03:58.480Z","correlationId":"smoke-health-001","services":{"nestjs":"up","database":"up","pythonService":"up"},"metrics":{"dbLatencyMs":4,"nlpLatencyMs":32,"totalCheckMs":36}}

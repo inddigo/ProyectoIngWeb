@@ -22,4 +22,4 @@ El formulario y la asistencia se adaptan al rubro y completitud. El profesional 
 
 ## Estado del despliegue
 
-La automatización valida el código y despliega el commit aprobado en Render Free, comprueba su SHA, salud y flujo real. La URL pública todavía depende de conectar las cuentas Render Free y Neon Free del equipo. Actualizar este estado con evidencia después del primer despliegue exitoso.
+La automatización valida el código y despliega el commit aprobado en Render Free, comprueba su SHA, salud y flujo real. Staging público: https://cotiza-ep2-web.onrender.com. El flujo real de Openverse, persistencia, consulta, cotización y aceptación fue comprobado; evidencia en `docs/evidence/staging-2026-10-20/`.

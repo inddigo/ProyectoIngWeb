@@ -165,7 +165,7 @@ type Filter = OrderStatus | 'ALL';
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <div class="page-container">
+      <div class="page-container"><section class="dashboard-intro"><span class="eyebrow">Tu taller</span><h1>Ideas listas para cobrar vida.</h1><p>Organiza los pedidos, revisa sus detalles y prepara tu próxima cotización.</p></section>
         @if (loading() && !orders().length) {
           <ion-card><ion-card-content>
             <ion-skeleton-text [animated]="true" style="width: 50%"></ion-skeleton-text>

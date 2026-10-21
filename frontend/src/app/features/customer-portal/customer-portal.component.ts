@@ -103,8 +103,8 @@ const PLACEHOLDERS: Record<Domain, string> = {
   ],
   template: `
     <ion-header>
-      <ion-toolbar color="primary">
-        <ion-title>Cotiza · Pedidos personalizados</ion-title>
+      <ion-toolbar>
+        <ion-title><a class="brand-link" routerLink="/" aria-label="Cotiza, inicio"><span class="brand-word">cotiza<span class="brand-dot" aria-hidden="true">.</span></span><span class="brand-caption">Ideas únicas. Pedidos a tu medida.</span></a></ion-title>
         <ion-buttons slot="end">
           @if (auth.currentUser(); as user) {
             <ion-button [routerLink]="auth.homeFor(user)">
@@ -125,15 +125,29 @@ const PLACEHOLDERS: Record<Domain, string> = {
     </ion-header>
 
     <ion-content class="ion-padding">
-      <div class="page-container">
+      <div class="page-container portal-container">
+        <nav class="journey" aria-label="Etapas de tu pedido">
+          <span [class.active]="!structured()"><b>01</b> Tu idea</span><i aria-hidden="true"></i>
+          <span [class.active]="structured()"><b>02</b> Los detalles</span><i aria-hidden="true"></i>
+          <span><b>03</b> Tu cotización</span>
+        </nav>
         <ion-grid>
           <ion-row>
+            @if (!structured()) {
+              <ion-col size="12" sizeLg="5" class="intro-column">
+                <span class="eyebrow">Hecho a tu manera</span>
+                <h1>Tu idea,<br />en <em>buenas manos.</em></h1>
+                <p class="intro-copy">Una torta para celebrar. Un tatuaje con historia. Cuéntanos qué imaginas y demos forma a los detalles.</p>
+                <img class="idea-illustration" src="/idea-studio.svg" alt="" width="300" height="190" />
+                <div class="intro-detail">Tú tienes la última palabra en cada detalle.</div>
+              </ion-col>
+            }
             <!-- Entrada en lenguaje natural -->
-            <ion-col size="12" [sizeLg]="structured() ? '5' : '12'">
-              <ion-card>
+            <ion-col size="12" [sizeLg]="structured() ? '5' : '7'">
+              <ion-card class="request-card">
                 <ion-card-header>
-                  <ion-card-title>Describe lo que necesitas</ion-card-title>
-                  <ion-card-subtitle>La IA convertirá tu mensaje en un formulario estructurado</ion-card-subtitle>
+                  <div class="step-label">01 / TU IDEA</div><ion-card-title>Cuéntanos qué tienes en mente</ion-card-title>
+                  <ion-card-subtitle>Organizamos los detalles para que puedas revisarlos antes de enviar.</ion-card-subtitle>
                 </ion-card-header>
                 <ion-card-content>
                   <form [formGroup]="requestForm" (ngSubmit)="structure()">
@@ -145,8 +159,8 @@ const PLACEHOLDERS: Record<Domain, string> = {
                       }
                     </ion-segment>
 
-                    <ion-list lines="none" class="ion-margin-top">
-                      <ion-item>
+                    <div class="request-fields">
+                      <div class="field-block">
                         <ion-textarea
                           formControlName="rawText"
                           label="Tu pedido"
@@ -159,8 +173,9 @@ const PLACEHOLDERS: Record<Domain, string> = {
                           [placeholder]="placeholder()"
                           errorText="Describe tu pedido con al menos 10 caracteres"
                         ></ion-textarea>
-                      </ion-item>
-                      <ion-item>
+                      </div>
+                      <button type="button" class="example-button" (click)="requestForm.controls.rawText.setValue(placeholder().replace('Ej: ', ''))">¿No sabes por dónde empezar? Usa un ejemplo ↗</button>
+                      <div class="field-block">
                         <ion-input
                           formControlName="referenceImage"
                           type="url"
@@ -171,18 +186,19 @@ const PLACEHOLDERS: Record<Domain, string> = {
                           placeholder="https://..."
                           errorText="Debe ser una URL que empiece con http:// o https://"
                         ></ion-input>
-                      </ion-item>
-                    </ion-list>
+                      </div>
+                    </div>
 
-                    <ion-button type="submit" expand="block" [disabled]="loading()">
+                    <ion-button type="submit" class="primary-action" expand="block" [disabled]="loading()">
                       @if (loading()) {
                         <ion-spinner slot="start" name="dots"></ion-spinner>
-                        Procesando con IA...
+                        Organizando tu idea...
                       } @else {
                         <ion-icon slot="start" name="sparkles-outline"></ion-icon>
-                        Estructurar pedido
+                        Dar forma a mi pedido
                       }
                     </ion-button>
+                    <p class="form-assurance">El profesional recibe tu pedido solo cuando lo confirmas.</p>
                   </form>
                 </ion-card-content>
               </ion-card>
@@ -193,7 +209,7 @@ const PLACEHOLDERS: Record<Domain, string> = {
               <ion-col size="12" sizeLg="7">
                 <ion-card>
                   <ion-card-header>
-                    <ion-card-title>Revisa los datos extraídos</ion-card-title>
+                    <div class="step-label">02 / LOS DETALLES</div><ion-card-title>Así empieza a tomar forma</ion-card-title>
                     <ion-card-subtitle>
                       Confianza de la IA:
                       <ion-badge [color]="confidenceColor()">{{ confidence() | percent }}</ion-badge>
@@ -279,6 +295,7 @@ const PLACEHOLDERS: Record<Domain, string> = {
             }
           </ion-row>
         </ion-grid>
+        <footer class="portal-footer"><strong>De una idea a algo muy tuyo.</strong><span>Describe · Revisa · Cotiza</span></footer>
       </div>
     </ion-content>
   `,

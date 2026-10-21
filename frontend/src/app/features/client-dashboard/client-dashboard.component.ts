@@ -101,7 +101,7 @@ import { Router } from '@angular/router';
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <div class="page-container">
+      <div class="page-container"><section class="dashboard-intro"><span class="eyebrow">Tu espacio</span><h1>Cada idea tiene su camino.</h1><p>Revisa tus pedidos y cotizaciones, y decide cómo quieres continuar.</p></section>
         @if (loading() && !orders().length) {
           @for (i of [1, 2]; track i) {
             <ion-card><ion-card-content>

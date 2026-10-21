@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="225" viewBox="0 0 360 225" fill="none">
+<rect x="25" y="31" width="208" height="154" rx="20" transform="rotate(-6 25 31)" fill="#E9EEDC"/>
+<rect x="66" y="23" width="210" height="164" rx="17" transform="rotate(5 66 23)" fill="#EEE1BC"/>
+<rect x="51" y="25" width="210" height="165" rx="17" fill="#F0E9CF" stroke="#D4DCC2"/>
+<path d="M78 162H228M89 152V115C89 110 94 107 99 107H209C214 107 219 110 219 115V152H89Z" stroke="#38634C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M98 107V84C98 78 103 74 109 74H199C205 74 210 78 210 84V107M99 87C110 98 116 78 127 88C138 99 144 78 155 88C166 98 173 79 184 88C193 96 202 88 210 86M90 124C101 136 108 116 120 127C130 137 138 116 149 127C161 138 170 117 181 127C193 139 202 118 218 125M154 74V52" stroke="#38634C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M154 47C144 42 148 33 154 29C160 35 164 43 154 47Z" fill="#D79256"/>
+<circle cx="239" cy="168" r="31" fill="#D9E8B0"/>
+<path d="M226 168L235 177L253 158" stroke="#38634C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M288 50L292 62L304 66L292 70L288 82L284 70L272 66L284 62L288 50Z" fill="#86A65A"/>
+<path d="M24 107L26 114L33 116L26 118L24 125L22 118L15 116L22 114L24 107Z" fill="#B7C694"/>
+<path d="M288 142L318 108L328 118L298 152L284 158L288 142Z" fill="#F0E9CF" stroke="#38634C" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M312 115L322 125M288 142L298 152" stroke="#38634C" stroke-width="2.5"/>
+</svg>

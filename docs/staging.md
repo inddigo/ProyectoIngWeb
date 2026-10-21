@@ -2,13 +2,13 @@
 
 ## Estado
 
-Preparado y validado sin crear recursos. Falta conectar cuentas, desplegar y comprobar una URL pública con Openverse real. Google Cloud queda descartado: los archivos de la raíz `terraform/` y scripts `bootstrap-staging.sh` / `deploy-staging.sh` son históricos y no se ejecutan en el pipeline actual. La configuración activa es `terraform/render`.
+Desplegado y verificado el 20 de octubre de 2026 con Openverse real: [web](https://cotiza-ep2-web.onrender.com), [API](https://cotiza-ep2-api.onrender.com/health) y [NLP](https://cotiza-ep2-nlp.onrender.com/health). El flujo de recuperación, persistencia, consulta, cotización y aceptación aprobó el smoke test. La evidencia inicial está en `docs/evidence/staging-2026-10-20/`. Google Cloud queda descartado: los archivos de la raíz `terraform/` y scripts `bootstrap-staging.sh` / `deploy-staging.sh` son históricos y no se ejecutan en el pipeline actual. La configuración activa es `terraform/render`.
 
 ## Arquitectura y límites
 
 Tres contenedores Render Free: Angular/nginx (8080), NestJS (3000) y FastAPI (8000). PostgreSQL reside en Neon Free con TLS. nginx mantiene el mismo origen; NestJS autentica sus llamadas a Python con `X-Service-Token`. Python permite `/health` sin secreto.
 
-Render suspende servicios tras 15 minutos sin tráfico; despertar cada uno tarda alrededor de un minuto. Las **750 horas mensuales se comparten entre los tres servicios**: sirven para uso académico intermitente, no para tres instancias activas todo el mes. También hay cuotas de transferencia y compilación. No activar monitores para mantenerlos despiertos ni planes de pago. Neon Free tiene cuotas propias y no requiere tarjeta. No usar PostgreSQL Free de Render: expira a los 30 días.
+Render suspende servicios tras 15 minutos sin tráfico; despertar cada uno tarda alrededor de un minuto. Las **750 horas mensuales se comparten entre los tres servicios**: sirven para uso académico intermitente, no para tres instancias activas todo el mes. La cuota también se comparte con otros servicios del mismo workspace. También hay cuotas de transferencia y compilación. No activar monitores para mantenerlos despiertos ni planes de pago. Neon Free tiene cuotas propias y no requiere tarjeta. No usar PostgreSQL Free de Render: expira a los 30 días.
 
 ## Preparación inicial
 
@@ -18,7 +18,7 @@ Render suspende servicios tras 15 minutos sin tráfico; despertar cada uno tarda
 4. Generar secretos aleatorios distintos: `TF_VAR_jwt_secret` y `TF_VAR_python_service_token` (32 caracteres o más), `TF_VAR_seed_baker_password` (16 o más). No escribirlos en archivos versionados, chat ni historial. La última será la contraseña de ambas cuentas demo.
 5. Desde **terraform/render**, ejecutar `terraform init`, `terraform plan -out=staging.tfplan`; revisar tres servicios `free` y aplicar `terraform apply staging.tfplan`. `main` debe contener EP2; para una prueba previa usar `TF_VAR_branch=ep2-integracion-web`.
 6. Conservar el estado Terraform privado con copia segura: contiene secretos y está excluido de Git. Usar siempre ese estado para actualizar los recursos. No crear también estos servicios manualmente o mediante Blueprint.
-7. Copiar las salidas de `terraform output` a las Variables del ambiente GitHub `staging`: `RENDER_NLP_SERVICE_ID`, `RENDER_API_SERVICE_ID`, `RENDER_WEB_SERVICE_ID`, `NLP_URL`, `API_URL`, `STAGING_URL`. Guardar como Secrets `RENDER_API_KEY` y `SEED_BAKER_PASSWORD` (igual al seed). La cuenta profesional es `pastelero@pasteleria.com`.
+7. La configuración inicial se guardó como Variables y Secrets del repositorio, disponibles para el job `staging`, porque la cuenta tiene permisos de escritura pero no de administración de ambientes. Para reproducirla, copiar las salidas de `terraform output` a las Variables de GitHub Actions: `RENDER_NLP_SERVICE_ID`, `RENDER_API_SERVICE_ID`, `RENDER_WEB_SERVICE_ID`, `NLP_URL`, `API_URL`, `STAGING_URL`. Guardar como Secrets `RENDER_API_KEY` y `SEED_BAKER_PASSWORD` (igual al seed). La cuenta profesional es `pastelero@pasteleria.com`.
 
 ## Automatización y evidencia
 
@@ -37,3 +37,11 @@ Desde terraform/render, usar valores ficticios solo para el plan: `RENDER_API_KE
 Abrir primero las tres URLs para despertarlas; después el frontend. Swagger NestJS: `STAGING_URL/api/docs`. Comprobar `/health` y ejecutar el smoke test con `REQUIRE_REAL_WEB=1`, `EXPECTED_REVISION` y `SEED_BAKER_PASSWORD` desde variables privadas del entorno. Usar datos ficticios, revisar consumo y probar antes de presentar. No dar staging por acreditado hasta obtener la evidencia real.
 
 Fuentes: [límites Render Free](https://render.com/docs/free), [Neon Free](https://neon.com/pricing), [Terraform Render](https://render.com/docs/terraform-provider), [despliegue por commit](https://api-docs.render.com/reference/create-deploy).
+
+## Operación de esta instalación
+
+- Espacio Render confirmado por el titular: `My Workspace`. Los tres servicios `cotiza-ep2-*` están en plan Free; no se modificaron los servicios anteriores.
+- Neon: proyecto `curly-frost-29571849` (`cotiza-ep2-staging`), rama de aplicación `br-sparkling-dream-b72kfl8v`, base `cotiza`, rol exclusivo `cotiza_app`. El plan de la cuenta se verificó como `free_v3`.
+- Terraform creó tres servicios y conserva el estado local privado en `terraform/render/terraform.tfstate`. Ese archivo contiene secretos: conservarlo y respaldarlo de forma privada, nunca subirlo a GitHub.
+- La credencial autorizada de Render utilizada por GitHub Actions vence el **27 de octubre de 2026 a las 21:42, hora de Chile continental**. Renovar el secreto `RENDER_API_KEY` antes de esa fecha para futuros despliegues; `RENDER_CREDENTIAL_EXPIRES_AT` registra su caducidad. Su vencimiento no borra ni detiene los servicios ya publicados. No es una credencial permanente.
+- Openverse tuvo un timeout inicial y luego se recuperó. Se verificó la recuperación posterior sin respaldo: 12 registros recibidos, 11 válidos, un duplicado filtrado y cuatro referencias mostradas. La prueba no oculta esa indisponibilidad transitoria.

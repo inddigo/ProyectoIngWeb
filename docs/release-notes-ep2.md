@@ -25,7 +25,7 @@ Plataforma para ordenar pedidos personalizados y cotizar trabajos por encargo se
 
 ## Validación
 
-54 pruebas backend, 38 Python, 20 frontend y cuatro pruebas del despliegue. Flujo real comprobado: recuperación, pedido persistido, consulta, cotización y aceptación. Consultar el pipeline del tag y su artefacto `ep2-staging-evidence` para la evidencia de esta versión exacta.
+54 pruebas backend, 38 Python, 22 frontend y cuatro pruebas del despliegue. Flujo real comprobado: recuperación, pedido persistido, consulta, cotización y aceptación. Consultar el pipeline del tag y su artefacto `ep2-staging-evidence` para la evidencia de esta versión exacta.
 
 ## Operación
 

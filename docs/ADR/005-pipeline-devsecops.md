@@ -15,9 +15,12 @@ dependencias, detección de secretos, construcción e imágenes, bloqueando ante
   `.trivyignore`: las vulnerabilidades se corrigen en origen (imagen runtime sin npm,
   `apk upgrade` en nginx, dependencias actualizadas).
 - Prueba de integración: se levanta el stack con Docker Compose y se ejecuta
-  `scripts/smoke-test.sh` (flujo completo cliente → NLP → cotización → aceptación).
+  `scripts/smoke-test.sh` (cliente → NLP → cotización → aceptación, encargo general, cancelación y rechazo, con controles entre clientes).
 - Acciones de terceros fijadas por SHA; `permissions: contents: read`.
-- `npm ci` / `pip install -r` con lockfiles para instalaciones reproducibles.
+- `npm ci` usa lockfiles. Python instala los rangos declarados en `requirements.txt`; `pip-audit` y Trivy verifican las versiones resueltas.
+
+- Terraform valida el módulo Render y hace un plan sin conexión con tres servicios Free.
+- El despliegue se habilita para `main` o tags de versión después de la integración. Usa la API de Render con el SHA aprobado y comprueba salud, revisión y recuperación real. CI utiliza una fuente sintética explícita; staging exige Openverse real.
 
 ## Consecuencias
 - (+) Evidencia verificable de controles que impiden continuar ante errores.

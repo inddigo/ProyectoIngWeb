@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsByteLength,
   IsIn,
   IsOptional,
   IsString,
@@ -7,16 +8,17 @@ import {
   MinLength,
 } from 'class-validator';
 
-// ADMIN no se puede auto-asignar desde el registro público.
-export const SELF_REGISTER_ROLES = ['CLIENT', 'BAKER'] as const;
+// Las cuentas con acceso a pedidos del negocio se aprovisionan fuera del registro público.
+export const SELF_REGISTER_ROLES = ['CLIENT'] as const;
 
 export class RegisterDto {
   @IsEmail()
+  @MaxLength(254)
   email: string;
 
   @IsString()
   @MinLength(8)
-  @MaxLength(72) // límite de bcrypt
+  @IsByteLength(8, 72) // bcrypt limita bytes, no caracteres Unicode.
   password: string;
 
   @IsString()

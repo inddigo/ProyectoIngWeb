@@ -2,7 +2,7 @@
 
 ## Problema y avance
 
-Los pedidos de servicios personalizados llegan como texto ambiguo. Cotiza extrae atributos para pastelería y tatuajes, recupera referencias visuales y permite al profesional cotizar con el cliente manteniendo control de los datos.
+Los profesionales que trabajan por encargo reciben mensajes ambiguos y dedican tiempo a aclarar detalles y calcular precios. Cotiza convierte esas solicitudes en pedidos revisables, reúne referencias y ayuda a cotizar con costos reales. La propuesta es multirubro; esta versión incorpora encargos generales con campos editables, además de extracción especializada para pastelería y tatuajes. Los paneles permiten buscar, filtrar y seguir el ciclo del pedido, con cancelación antes de cotizar.
 
 ## Arquitectura y fuente
 

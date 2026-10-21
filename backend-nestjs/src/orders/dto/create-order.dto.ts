@@ -13,9 +13,11 @@ import {
   MaxLength,
   Min,
   ValidateNested,
+  Validate,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SUPPORTED_DOMAINS, Domain } from '../../common/constants/domains';
+import { OrderAttributesValidator } from './order-attributes.validator';
 
 export class WebReferenceDto {
   @IsString()
@@ -23,7 +25,8 @@ export class WebReferenceDto {
   @MaxLength(200)
   title: string;
 
-  @IsUrl({ require_protocol: true, protocols: ['https'] })
+  @IsUrl({ require_protocol: true, protocols: ['https'], disallow_auth: true })
+  @MaxLength(2048)
   imageUrl: string;
 
   @IsString()
@@ -31,7 +34,7 @@ export class WebReferenceDto {
   @MaxLength(100)
   source: string;
 
-  @IsUrl({ require_protocol: true, protocols: ['https'] })
+  @IsUrl({ require_protocol: true, protocols: ['https'], disallow_auth: true })
   @MaxLength(500)
   @IsOptional()
   sourceUrl?: string;
@@ -67,10 +70,11 @@ export class CreateOrderDto {
   domain: Domain;
 
   @IsObject()
-  @IsOptional()
-  attributes?: Record<string, unknown>;
+  @Validate(OrderAttributesValidator)
+  attributes: Record<string, unknown>;
 
-  @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
+  @IsUrl({ require_protocol: true, protocols: ['https'], disallow_auth: true })
+  @MaxLength(2048)
   @IsOptional()
   imageUrl?: string;
 

@@ -6,6 +6,7 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  Max,
   Min,
 } from 'class-validator';
 
@@ -15,6 +16,7 @@ export class CreateQuoteDto {
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)
+  @Max(99999999.99)
   estimatedPrice: number;
 
   @IsString()

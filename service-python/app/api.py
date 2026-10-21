@@ -9,8 +9,8 @@ from app.services.scraper import web_scraper
 router = APIRouter()
 
 # Mantener sincronizado con backend-nestjs/src/common/constants/domains.ts
-SUPPORTED_DOMAINS = ("cake", "tattoo")
-Domain = Literal["cake", "tattoo"]
+SUPPORTED_DOMAINS = ("general", "cake", "tattoo")
+Domain = Literal["general", "cake", "tattoo"]
 
 EVALUATION_BENCHMARK: list[dict[str, Any]] = [
     {

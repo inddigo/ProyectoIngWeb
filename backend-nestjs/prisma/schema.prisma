@@ -24,6 +24,7 @@ enum OrderStatus {
   QUOTED
   ACCEPTED_BY_CLIENT
   REJECTED_BY_CLIENT
+  CANCELLED_BY_CLIENT
 }
 
 model User {

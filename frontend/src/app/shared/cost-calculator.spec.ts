@@ -30,5 +30,6 @@ describe('cost-calculator', () => {
   it('propone insumos distintos según el rubro', () => {
     expect(defaultItems('cake', 10)[0].name).toBe('Harina');
     expect(defaultItems('tattoo', 10)[0].name).toBe('Tintas');
+    expect(defaultItems('general', 2)).toEqual([{ name: 'Materiales / recursos', packageCost: 0, packageQuantity: 1, unit: 'u', quantityUsed: 2 }]);
   });
 });

@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -23,6 +24,10 @@ type Attributes = Record<string, unknown>;
 
 /** Estimación referencial basada en reglas por rubro (punto de partida de la calculadora). */
 export function estimatePrice(domain: string, attrs: Attributes) {
+  if (domain === 'general')
+    throw new BadRequestException(
+      'Los encargos generales se cotizan con costos ingresados por el profesional',
+    );
   if (domain === 'tattoo') {
     const sizeCm = parseInt(String(attrs['size'] ?? ''), 10) || 10;
     const baseCost = sizeCm * TATTOO_PRICE_PER_CM;
@@ -91,6 +96,15 @@ export class QuotesService {
 
     // Transacción: crear cotización + actualizar estado del pedido
     return this.prisma.$transaction(async (tx) => {
+      // El cambio condicional bloquea cancelaciones o cotizaciones concurrentes.
+      const claimed = await tx.order.updateMany({
+        where: { id: orderId, status: OrderStatus.CONFIRMED_BY_CLIENT },
+        data: { status: OrderStatus.QUOTED },
+      });
+      if (claimed.count !== 1)
+        throw new ConflictException(
+          'El pedido cambió mientras preparabas la cotización',
+        );
       const quote = await tx.quote.create({
         data: {
           orderId,
@@ -98,10 +112,6 @@ export class QuotesService {
           details,
           breakdown: breakdown as Prisma.InputJsonValue | undefined,
         },
-      });
-      await tx.order.update({
-        where: { id: orderId },
-        data: { status: OrderStatus.QUOTED },
       });
       return quote;
     });

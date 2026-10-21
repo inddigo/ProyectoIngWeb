@@ -47,6 +47,9 @@ export function summarizeCosts(inputs: CostInputs): CostSummary {
 
 /** Insumos de partida según el rubro y el tamaño del pedido. */
 export function defaultItems(domain: string, quantity: number): CostItem[] {
+  if (domain === 'general') return [
+    { name: 'Materiales / recursos', packageCost: 0, packageQuantity: 1, unit: 'u', quantityUsed: quantity },
+  ];
   if (domain === 'tattoo') {
     return [
       { name: 'Tintas', packageCost: 25000, packageQuantity: 100, unit: 'ml', quantityUsed: Math.max(5, quantity) },

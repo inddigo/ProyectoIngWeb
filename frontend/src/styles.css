@@ -71,6 +71,20 @@ button:focus-visible, a:focus-visible { outline: 3px solid #668d47; outline-offs
 .intro-column h1 { font-size: clamp(42px, 5.3vw, 67px); line-height: 1.06; letter-spacing: -3.2px; font-weight: 750; margin: 22px 0; max-width: 450px; }
 .intro-column h1 em { font-style: normal; color: #548246; }
 .intro-copy { font-size: 16px; line-height: 1.8; color: var(--studio-muted); max-width: 360px; margin-bottom: 24px; }
+.studio-context { max-width: 360px; font-size: 13px; line-height: 1.7; color: var(--studio-muted); }
+.available-domains { margin: 14px 0 0; font-size: 12px; font-weight: 600; color: var(--studio-muted); }
+.request-card ion-segment-button ion-label { white-space: normal; font-size: 12px; line-height: 1.4; }
+.order-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 12px 24px; }
+.order-overview > div { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: #fff; border: 1px solid var(--studio-border); border-radius: 14px; }
+.order-overview strong { color: #20594b; font-size: 28px; }
+.order-overview span { color: var(--studio-muted); font-size: 12px; }
+.order-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; margin: 12px; }
+.order-filters label { display: flex; flex-direction: column; flex: 1 1 160px; gap: 7px; color: var(--studio-muted); font-size: 12px; }
+.order-filters label:first-child { flex-grow: 2; }
+.order-filters input, .order-filters select { width: 100%; min-height: 44px; border: 1px solid #cfd8ce; border-radius: 9px; padding: 10px; background: #fff; color: #223b32; font: inherit; }
+.filter-reset { min-height: 44px; padding: 10px; background: transparent; border: 0; color: #20594b; text-decoration: underline; cursor: pointer; }
+.results-count { margin: 18px 16px; color: var(--studio-muted); font-size: 12px; }
+@media (max-width: 600px) { .order-overview { grid-template-columns: repeat(2, 1fr); margin-inline: 0; } .order-filters { margin-inline: 0; } }
 .idea-illustration { display: block; width: 300px; max-width: 90%; height: 190px; object-fit: contain; object-position: left center; margin: 24px 0; }
 .intro-detail { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #54704d; }
 .intro-detail::before { content: ''; width: 6px; height: 6px; background: #6f9455; border-radius: 50%; }

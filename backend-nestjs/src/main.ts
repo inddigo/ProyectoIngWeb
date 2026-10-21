@@ -3,11 +3,18 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { CorrelationLoggingInterceptor } from './common/interceptors/correlation-logging.interceptor';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { configureHttpSecurity } from './common/http-security';
+import { json } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.use(json({ limit: '32kb' }));
+  configureHttpSecurity(app);
 
-  const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:4200')
+  const origins = (
+    process.env.CORS_ORIGINS ??
+    'http://localhost:4200,https://localhost,capacitor://localhost'
+  )
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);

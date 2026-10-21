@@ -2,6 +2,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from datetime import UTC, datetime
@@ -58,7 +59,8 @@ async def service_authentication(request: Request, call_next: Any) -> Response:
 
 @app.middleware("http")
 async def correlation_and_logging_middleware(request: Request, call_next: Any) -> Response:
-    correlation_id = request.headers.get("x-correlation-id") or request.headers.get("x-request-id") or str(uuid.uuid4())
+    incoming_id = request.headers.get("x-correlation-id") or request.headers.get("x-request-id") or ""
+    correlation_id = incoming_id if re.fullmatch(r"[A-Za-z0-9._:-]{1,100}", incoming_id) else str(uuid.uuid4())
     request.state.correlation_id = correlation_id
     start = time.perf_counter()
 

@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -66,5 +66,17 @@ describe('AuthService', () => {
     await expect(
       service.register({ email: 'a@b.cl', password: 'password1', name: 'A' }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('no crea cuentas privilegiadas aunque se omita la validación HTTP', async () => {
+    await expect(
+      service.register({
+        email: 'intruso@test.local',
+        password: 'password1',
+        name: 'Intruso',
+        role: 'BAKER',
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(users.create).not.toHaveBeenCalled();
   });
 });

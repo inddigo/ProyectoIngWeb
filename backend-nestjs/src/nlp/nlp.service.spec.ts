@@ -58,6 +58,29 @@ describe('NlpService', () => {
     const res = await service.structureOrder('torta', 'tattoo');
     expect(res.fallback).toBe(true);
     expect(res.domain).toBe('tattoo');
+    expect(res.entities).toMatchObject({
+      size: '',
+      style: '',
+      body_part: '',
+      confidence_score: 0,
+    });
+  });
+
+  it('permite completar un encargo general manualmente si Python no responde', async () => {
+    http.post.mockReturnValue(throwError(() => new Error('ECONNREFUSED')));
+    const res = await service.structureOrder(
+      'Un trabajo personalizado',
+      'general',
+    );
+    expect(res.fallback).toBe(true);
+    expect(res.entities).toMatchObject({
+      service_type: '',
+      quantity: 1,
+      materials: '',
+      deadline: '',
+      delivery: '',
+    });
+    expect(res.entities).not.toHaveProperty('servings');
   });
 
   it('trata un contrato inválido como fallo', async () => {

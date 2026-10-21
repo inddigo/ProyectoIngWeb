@@ -26,3 +26,4 @@ gha-creds-*.json
 # Material del curso y configuración local de herramientas (no forman parte del proyecto)
 /*.pdf
 skills-lock.json
+/demo-credentials.local.txt

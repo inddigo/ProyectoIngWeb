@@ -1,4 +1,4 @@
-> **Staging EP2:** Render Free + Neon Free. Configuración activa: `terraform/render`; guía: [docs/staging.md](docs/staging.md). Google Cloud y sus scripts quedan históricos. Falta conectar las cuentas y comprobar el despliegue real.
+> **Staging EP2:** Render Free + Neon Free. Configuración activa: `terraform/render`; guía: [docs/staging.md](docs/staging.md). Google Cloud y sus scripts quedan históricos. Staging público: [cotiza-ep2-web.onrender.com](https://cotiza-ep2-web.onrender.com), con flujo real verificado.
 
 # Cotiza — Plataforma de cotización inteligente para servicios personalizados
 
@@ -19,7 +19,7 @@ costos asistida por reglas. El cliente sigue su pedido y acepta o rechaza la cot
 
 ## Estado de preparación de EP2
 
-Correcciones y validación técnica: [guía de entrega y evidencias](docs/entrega2.md). El staging público requiere conectar Render Free y Neon Free; no está desplegado todavía. El flujo de CI utiliza una fuente sintética explícita; el despliegue exige datos reales de Openverse.
+Correcciones y validación técnica: [guía de entrega y evidencias](docs/entrega2.md). El staging público está desplegado en [Render](https://cotiza-ep2-web.onrender.com) con PostgreSQL Neon y flujo real verificado. El flujo de CI utiliza una fuente sintética explícita; el despliegue exige datos reales de Openverse.
 
 ## 1. Continuidad y correcciones de la EP1
 

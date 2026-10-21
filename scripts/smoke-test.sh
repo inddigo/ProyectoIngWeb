@@ -32,7 +32,18 @@ if [ -n "${EXPECTED_REVISION:-}" ]; then
 fi
 
 echo "2. Estructuración NLP y recuperación web (NestJS -> FastAPI -> Openverse)"
-STRUCT=$(post /api/v1/orders/nlp-structure '{"rawText":"Quiero una torta vegana de chocolate para 20 personas con temática de cumpleaños","domain":"cake"}')
+STRUCT=$(post /api/v1/orders/nlp-structure '{"rawText":"Quiero una torta vegana de chocolate para 20 personas con tem\u00e1tica de cumplea\u00f1os","domain":"cake"}')
+# Reintentos acotados para una fuente externa lenta tras el despliegue.
+# Una lista vacía, un fixture o un respaldo nunca acreditan recuperación real.
+if [ "${REQUIRE_REAL_WEB:-0}" = "1" ]; then
+  for attempt in 1 2; do
+    REAL_READY=$(echo "$STRUCT" | json "not d.get('fallback', False) and not d.get('extraction_meta', {}).get('fallback_used', True) and len(d.get('web_references', [])) > 0 and all(r['source'].startswith('Openverse / ') and 'fixture' not in r['source'].lower() for r in d['web_references'])")
+    if [ "$REAL_READY" = "True" ]; then break; fi
+    echo "  Fuente externa aún no disponible; reintento acotado $attempt/2"
+    sleep 2
+    STRUCT=$(post /api/v1/orders/nlp-structure '{"rawText":"Quiero una torta vegana de chocolate para 20 personas con tem\u00e1tica de cumplea\u00f1os","domain":"cake"}')
+  done
+fi
 echo "$STRUCT" | json "d['entities']"
 check "porciones extraídas" "$(echo "$STRUCT" | json "d['entities']['servings']")" "20"
 check "metadatos de extracción presentes" "$(echo "$STRUCT" | json "'latency_ms' in d.get('extraction_meta', {})")" "True"

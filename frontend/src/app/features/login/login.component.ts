@@ -82,6 +82,7 @@ type Mode = 'login' | 'register';
 
     <ion-content class="ion-padding">
       <div class="auth-wrapper">
+        <div class="auth-intro"><span class="eyebrow">Tu espacio en Cotiza</span><h1>Sigamos con tu idea.</h1><p>Encuentra tus pedidos, revisa los detalles y da el siguiente paso.</p></div>
         <ion-segment [value]="mode()" (ionChange)="setMode($any($event.detail.value))">
           <ion-segment-button value="login"><ion-label>Ingresar</ion-label></ion-segment-button>
           <ion-segment-button value="register"><ion-label>Registrarse</ion-label></ion-segment-button>

@@ -2,7 +2,7 @@
 
 ## Estado verificable
 
-El código incorpora las correcciones de recuperación, privacidad, métricas, contratos y observabilidad. El despliegue cloud está automatizado pero **pendiente de ejecutar**, porque falta conectar las cuentas gratuitas de Render y Neon y verificar la URL pública. No presentar esta preparación como cumplimiento total del requisito de staging.
+El código incorpora las correcciones de recuperación, privacidad, métricas, contratos y observabilidad. El staging está desplegado en https://cotiza-ep2-web.onrender.com y el flujo completo con datos reales de Openverse fue aprobado. La evidencia está en `docs/evidence/staging-2026-10-20/`; revisar también el pipeline del tag de la release evaluable.
 
 ## Evidencia local
 
@@ -25,7 +25,7 @@ Validación realizada el 20 de octubre de 2026:
 5. Persistencia: migración versionada, fecha, autor, licencia, consulta, enlace original, índices y unicidad por pedido/imagen.
 6. Consulta: filtros de dominio, texto y fuente; los clientes acceden solo a referencias de sus pedidos.
 7. Evaluación: tasa de válidos sobre todo el lote, duplicados y latencia; benchmark NLP de 21 campos. El 100 % del pequeño benchmark no representa exactitud general.
-8. Integración: flujo fuente/Python/NestJS/PostgreSQL/frontend. CI es determinista; la demostración externa real queda pendiente del despliegue.
+8. Integración: flujo fuente/Python/NestJS/PostgreSQL/frontend. CI es determinista; el staging público también se comprobó con Openverse real.
 9. Diseño adaptativo: especificación preliminar en `proyecto.md`, con variables, decisión, control humano y evaluación futura. No se exige el motor final en esta etapa.
 10. Pipeline/observabilidad: pruebas, seguridad, Terraform, logs correlacionados, salud y métricas; el despliegue falla ante configuración ausente o falta de recuperación real.
 11. Documentación: README, arquitectura, ADR, APIs, staging, esta guía y presentación breve.
@@ -37,7 +37,7 @@ Validación realizada el 20 de octubre de 2026:
 - Tablero: https://github.com/users/inddigo/projects/3
 - Prototipo: https://www.figma.com/design/u0EsbFF2IfE2B7LOor9WzQ/E1?node-id=3-90
 - Nombre propuesto de versión: `v0.2.0-ep2`.
-- Staging: pendiente de habilitar la cuenta y completar [staging.md](staging.md). La URL válida quedará en el resumen del workflow.
+- Staging: https://cotiza-ep2-web.onrender.com. Operación y caducidad de la credencial CI: [staging.md](staging.md).
 
 Publicar el tag/release sobre el SHA corregido, con sus pruebas aprobadas y evidencia de staging. Un borrador no es todavía una entrega publicada. No etiquetar el antiguo `main` que solo contiene EP1.
 
@@ -55,13 +55,10 @@ Publicar el tag/release sobre el SHA corregido, con sus pruebas aprobadas y evid
 
 El historial ya registra aportes de Ferfishy, Joshua/Joshua Villavicencio y German-Oses. Ejemplos: `968e353` (ajustes Python), `fa9b1a0` (integración de documentación) y `8ed5df2` (enlace al prototipo). El equipo debe explicar sus aportes reales durante la demostración; esta guía no asigna trabajo ni participación no acreditados.
 
-## Secuencia que realiza el equipo para publicar
+## Publicación de la versión evaluable
 
-1. Revisar las correcciones locales y subir la rama `ep2-integracion-web` (`git push origin ep2-integracion-web`). Las correcciones finales del pipeline y de dependencias deben incluirse; el primer commit de esta revisión no contiene esos últimos ajustes.
-2. Esperar que la ejecución nueva de la PR #14 apruebe todos los controles de CI. No reutilizar la ejecución anterior fallida ni una ejecución de EP1.
-3. Conectar Render y Neon Free siguiendo `staging.md`, crear los servicios gratuitos y configurar el ambiente `staging`.
-4. Integrar la PR en `main` y comprobar el despliegue automático, su URL, SHA y el artefacto `ep2-staging-evidence` con recuperación real.
-5. En GitHub, ir a Releases > Draft a new release. Crear `v0.2.0-ep2` sobre el commit corregido de `main`, incluir el enlace al staging y a la ejecución aprobada. Publicar solo cuando esa versión funcione.
-6. Entregar el enlace de la release, repositorio, staging, tablero y Figma junto con la presentación y participación del equipo. No hace falta subir un ZIP adicional salvo indicación docente.
+La versión se publica como `v0.2.0-ep2` desde el commit corregido de la rama `ep2-integracion-web`. El tag identifica el código evaluable; no es necesario cambiar el antiguo `main` para que el tag sea válido. La PR #14 conserva la revisión y permite integrar después esa misma versión.
 
-Estas instrucciones no sustituyen la configuración cloud ni una demostración real.
+El pipeline del tag debe aprobar todas las etapas, incluido el despliegue y `ep2-staging-evidence`. La release publicada incluye los enlaces al staging, ejecución aprobada, tablero y Figma. El historial y los aportes del equipo se deben explicar durante la demostración.
+
+Los servicios ya están creados y las variables/secretos de Actions están configurados en el repositorio con autorización del titular. La credencial CI vence el 27 de octubre de 2026 a las 21:42 (Chile continental); revisar `staging.md` para su renovación. Las cuentas de demostración están en un archivo privado local, excluido de Git.

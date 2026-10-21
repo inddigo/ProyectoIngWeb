@@ -2,16 +2,18 @@
 
 ## Estado verificable
 
-El código incorpora las correcciones de recuperación, privacidad, métricas, contratos y observabilidad. El despliegue cloud está automatizado pero **pendiente de ejecutar**, porque el equipo aún no tiene proyecto GCP con facturación ni servidor. No presentar esta preparación como cumplimiento total del requisito de staging.
+El código incorpora las correcciones de recuperación, privacidad, métricas, contratos y observabilidad. El despliegue cloud está automatizado pero **pendiente de ejecutar**, porque falta conectar las cuentas gratuitas de Render y Neon y verificar la URL pública. No presentar esta preparación como cumplimiento total del requisito de staging.
 
 ## Evidencia local
 
 Validación realizada el 20 de octubre de 2026:
 
 - Backend: 32 pruebas Jest aprobadas; lint y compilación NestJS.
-- Python: 32 pruebas aprobadas; Ruff y formato. Incluye procesamiento del lote completo, duplicados después del cuarto resultado, caché/expiración, aislamiento de pruebas, privacidad, timeout y recuperación.
+- Python: 33 pruebas aprobadas; Ruff y formato. Incluye procesamiento del lote completo, duplicados después del cuarto resultado, caché/expiración, aislamiento de pruebas, privacidad, timeout y recuperación.
 - Frontend: 15 pruebas aprobadas; lint y compilación web/PWA.
-- Terraform: configuración válida y plan sin refresco con 24 recursos nuevos, cero modificaciones y cero destrucciones. No se aplicó ese plan.
+- Despliegue Render: tres pruebas de protección (rechazo de plan de pago, SHA distinto y registro de revisión correcta).
+- Integración local tras adaptar Render: flujo completo aprobado con fuente sintética, secreto entre servicios y límite de 512 MiB. Memoria observada después del flujo: Python 319 MiB, backend 54 MiB y frontend 13 MiB. No demuestra rendimiento con la CPU de Render ni recuperación externa real.
+- Terraform Render: configuración válida y plan sin refresco con tres servicios Free, cero modificaciones y cero destrucciones. No se aplicó ese plan. La configuración GCP anterior es histórica.
 - La integración Docker se ejecuta con `docker-compose.ci.yml`: es una fuente sintética y se identifica como tal. La evidencia definitiva se encuentra en la ejecución de GitHub Actions de la versión evaluable.
 
 ## Correspondencia con la pauta EP2
@@ -57,7 +59,7 @@ El historial ya registra aportes de Ferfishy, Joshua/Joshua Villavicencio y Germ
 
 1. Revisar las correcciones locales y subir la rama `ep2-integracion-web` (`git push origin ep2-integracion-web`). Las correcciones finales del pipeline y de dependencias deben incluirse; el primer commit de esta revisión no contiene esos últimos ajustes.
 2. Esperar que la ejecución nueva de la PR #14 apruebe todos los controles de CI. No reutilizar la ejecución anterior fallida ni una ejecución de EP1.
-3. Habilitar el proyecto cloud siguiendo `staging.md`, configurar el ambiente `staging` y revisar los recursos/costos.
+3. Conectar Render y Neon Free siguiendo `staging.md`, crear los servicios gratuitos y configurar el ambiente `staging`.
 4. Integrar la PR en `main` y comprobar el despliegue automático, su URL, SHA y el artefacto `ep2-staging-evidence` con recuperación real.
 5. En GitHub, ir a Releases > Draft a new release. Crear `v0.2.0-ep2` sobre el commit corregido de `main`, incluir el enlace al staging y a la ejecución aprobada. Publicar solo cuando esa versión funcione.
 6. Entregar el enlace de la release, repositorio, staging, tablero y Figma junto con la presentación y participación del equipo. No hace falta subir un ZIP adicional salvo indicación docente.

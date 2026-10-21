@@ -1,3 +1,5 @@
+> **Staging EP2:** Render Free + Neon Free. Configuración activa: `terraform/render`; guía: [docs/staging.md](docs/staging.md). Google Cloud y sus scripts quedan históricos. Falta conectar las cuentas y comprobar el despliegue real.
+
 # Cotiza — Plataforma de cotización inteligente para servicios personalizados
 
 Plataforma SaaS multirubro que transforma pedidos escritos en lenguaje natural
@@ -17,7 +19,7 @@ costos asistida por reglas. El cliente sigue su pedido y acepta o rechaza la cot
 
 ## Estado de preparación de EP2
 
-Correcciones y validación técnica: [guía de entrega y evidencias](docs/entrega2.md). El staging público requiere habilitar un proyecto GCP; no está desplegado todavía. El flujo de CI utiliza una fuente sintética explícita; el despliegue exige datos reales de Openverse.
+Correcciones y validación técnica: [guía de entrega y evidencias](docs/entrega2.md). El staging público requiere conectar Render Free y Neon Free; no está desplegado todavía. El flujo de CI utiliza una fuente sintética explícita; el despliegue exige datos reales de Openverse.
 
 ## 1. Continuidad y correcciones de la EP1
 
@@ -45,7 +47,7 @@ En la **Entrega Parcial 2 (EP2)** se reutiliza la base arquitectónica, multipla
 | Backend orquestador | [`backend-nestjs/`](backend-nestjs) | NestJS 11, Prisma 6, passport-jwt, class-validator |
 | Servicio NLP + Web | [`service-python/`](service-python) | Python 3.12, FastAPI, spaCy `es_core_news_md`, httpx |
 | Base de datos | — | PostgreSQL 16 (migraciones versionadas Prisma) |
-| Infraestructura | [`terraform/`](terraform), [`docker-compose.yml`](docker-compose.yml) | Docker, Terraform (Google Cloud Run + Cloud SQL) |
+| Infraestructura | [`terraform/render/`](terraform/render), [`docker-compose.yml`](docker-compose.yml) | Docker, Terraform (Render Free) y PostgreSQL Neon Free |
 | CI/CD | [`.github/workflows/`](.github/workflows/devsecops-ci-cd.yml) | GitHub Actions |
 
 ---
@@ -197,12 +199,12 @@ Archivo: [`.github/workflows/devsecops-ci-cd.yml`](.github/workflows/devsecops-c
 ## 10. Variables de entorno, secretos y limitaciones conocidas
 
 ### 10.1. GitHub Actions Variables y Secrets
-- **Variables (`vars.*`):** `NODE_VERSION` (`22`), `PYTHON_VERSION` (`3.12`), `TERRAFORM_VERSION` (`1.9.8`); para staging: `GCP_PROJECT_ID` real, `GCP_REGION`, `TF_STATE_BUCKET`, `GCP_DEPLOY_SA`, `GCP_WIF_PROVIDER`. La URL se obtiene de Terraform.
-- **Secrets (`secrets.*`):** `JWT_SECRET`, `DB_PASSWORD`, autenticación GCP mediante OIDC (ver [staging](docs/staging.md)).
-- **Archivos de ejemplo:** [`.env.example`](.env.example), [`backend-nestjs/.env.example`](backend-nestjs/.env.example), [`service-python/.env.example`](service-python/.env.example) y [`terraform/environments/staging.tfvars.example`](terraform/environments/staging.tfvars.example).
+- **Variables (`vars.*`):** `NODE_VERSION` (`22`), `PYTHON_VERSION` (`3.12`), `TERRAFORM_VERSION` (`1.9.8`); para staging: `RENDER_NLP_SERVICE_ID`, `RENDER_API_SERVICE_ID`, `RENDER_WEB_SERVICE_ID`, `NLP_URL`, `API_URL`, `STAGING_URL`. Sus valores se obtienen de Terraform.
+- **Secrets (`secrets.*`):** `JWT_SECRET` y `DB_PASSWORD` opcionales para CI; `RENDER_API_KEY` y `SEED_BAKER_PASSWORD` para staging (ver [staging](docs/staging.md)).
+- **Archivos de ejemplo:** [`.env.example`](.env.example), [`backend-nestjs/.env.example`](backend-nestjs/.env.example), [`service-python/.env.example`](service-python/.env.example) y [`terraform/render/variables.tf`](terraform/render/variables.tf).
 
 ### 10.2. Limitaciones actuales identificadas y trabajo futuro (hacia Entrega Final)
-1. **Caché de referencias en memoria local:** El caché con TTL de `service-python` reside en la memoria del proceso; si se escalan múltiples instancias en Cloud Run, cada réplica mantiene su propio caché.
+1. **Caché de referencias en memoria local:** El caché con TTL de `service-python` reside en la memoria del proceso; si se escalan múltiples instancias en el proveedor, cada réplica mantiene su propio caché.
 2. **Cobertura de rubros:** Actualmente los extractores NLP y las reglas de estimación están especializados en `cake` (pastelería) y `tattoo` (tatuajes).
 3. **Trabajo para el Módulo 3 (Entrega Final):** Completar la calibración automática de precios e insumos utilizando el histórico acumulado de cotizaciones aceptadas/rechazadas por profesional y ejecutar la evaluación comparativa frente a la línea base no adaptativa.
 

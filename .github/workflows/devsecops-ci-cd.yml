@@ -245,6 +245,8 @@ jobs:
       EVIDENCE_DIR: ep2-staging-evidence
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Instalar cliente HTTPS del despliegue
+        run: python3 -m pip install httpx==0.28.1
       - name: Desplegar el commit aprobado y despertar servicios gratuitos
         run: |
           test -n "$SEED_BAKER_PASSWORD" || { echo '::error::Falta SEED_BAKER_PASSWORD'; exit 1; }

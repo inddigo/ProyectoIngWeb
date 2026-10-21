@@ -1,5 +1,4 @@
 """Despliega el SHA aprobado en Render; no crea servicios ni cambia planes."""
-import http.client
 import json
 import os
 import re
@@ -7,6 +6,8 @@ import time
 import urllib.error
 import urllib.parse
 from pathlib import Path
+
+import httpx
 
 API = "https://api.render.com/v1"
 
@@ -25,16 +26,12 @@ def request_json(url, token=None, payload=None):
         raise RuntimeError("Solo se permiten endpoints HTTPS de Render")
     if token and parsed.hostname != "api.render.com":
         raise RuntimeError("La credencial Render solo puede enviarse a su API oficial")
-    connection = http.client.HTTPSConnection(parsed.hostname, timeout=90)
-    try:
-        # HTTPSConnection solo abre HTTPS; no admite file:// ni sigue redirecciones.
-        connection.request("POST" if payload is not None else "GET", parsed.path or "/", body=data, headers=headers)
-        response = connection.getresponse()
-        if response.status < 200 or response.status >= 300:
-            raise urllib.error.HTTPError(url, response.status, "Respuesta HTTP no exitosa", None, None)
-        return json.loads(response.read())
-    finally:
-        connection.close()
+    # httpx valida TLS y no admite file://; no seguir redirecciones con secretos.
+    with httpx.Client(timeout=90, follow_redirects=False) as client:
+        response = client.request("POST" if payload is not None else "GET", url, content=data, headers=headers)
+        if response.status_code < 200 or response.status_code >= 300:
+            raise urllib.error.HTTPError(url, response.status_code, "Respuesta HTTP no exitosa", None, None)
+        return response.json()
 
 
 
@@ -83,7 +80,7 @@ def main():
                 health = request_json(url + "/health")
                 if health.get("status") == "ok":
                     break
-            except (urllib.error.URLError, ValueError, OSError, http.client.HTTPException):
+            except (urllib.error.URLError, ValueError, OSError, httpx.HTTPError):
                 pass
             time.sleep(10)
         else:
@@ -96,6 +93,6 @@ if __name__ == "__main__":
         main()
     except urllib.error.HTTPError as error:
         raise SystemExit(f"Render/health respondió HTTP {error.code}; revisar el panel del proveedor") from None
-    except (RuntimeError, urllib.error.URLError, OSError, http.client.HTTPException) as error:
+    except (RuntimeError, urllib.error.URLError, OSError, httpx.HTTPError) as error:
         # Evitar imprimir cuerpos HTTP o cabeceras que puedan contener secretos.
         raise SystemExit(str(error) if isinstance(error, RuntimeError) else "Fallo de conexión al proveedor") from None

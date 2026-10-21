@@ -1,4 +1,6 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { OrdersToolbarComponent } from '../../shared/orders-toolbar.component';
+import { filterOrders, OrderFilters } from '../../shared/order-filters';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import {
   FormArray,
@@ -25,15 +27,12 @@ import {
   IonIcon,
   IonInput,
   IonItem,
-  IonLabel,
   IonList,
   IonModal,
   IonNote,
   IonRefresher,
   IonRefresherContent,
   IonRow,
-  IonSegment,
-  IonSegmentButton,
   IonSelect,
   IonSelectOption,
   IonSkeletonText,
@@ -60,7 +59,6 @@ import { apiErrorMessage } from '../../core/interceptors/error.interceptor';
 import {
   DOMAIN_LABELS,
   Order,
-  OrderStatus,
   STATUS_COLORS,
   STATUS_LABELS,
 } from '../../core/models/order.model';
@@ -77,11 +75,11 @@ import {
   summarizeCosts,
 } from '../../shared/cost-calculator';
 
-type Filter = OrderStatus | 'ALL';
 
 @Component({
   selector: 'app-baker-dashboard',
   imports: [
+    OrdersToolbarComponent,
     ReactiveFormsModule,
     CurrencyPipe,
     DatePipe,
@@ -94,10 +92,7 @@ type Filter = OrderStatus | 'ALL';
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    IonSegment,
-    IonSegmentButton,
-    IonLabel,
-    IonGrid,
+          IonGrid,
     IonRow,
     IonCol,
     IonCard,
@@ -144,20 +139,14 @@ type Filter = OrderStatus | 'ALL';
       <ion-toolbar color="primary">
         <ion-title>Panel del profesional</ion-title>
         <ion-buttons slot="end">
+          <ion-button (click)="load()" [disabled]="loading()">Actualizar</ion-button>
           <ion-button (click)="logout()">
             <ion-icon slot="start" name="log-out-outline"></ion-icon>
             <span class="ion-hide-sm-down">Salir</span>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
-      <ion-toolbar>
-        <ion-segment [value]="filter()" (ionChange)="setFilter($any($event.detail.value))" [scrollable]="true">
-          <ion-segment-button value="CONFIRMED_BY_CLIENT"><ion-label>Por cotizar</ion-label></ion-segment-button>
-          <ion-segment-button value="QUOTED"><ion-label>Cotizados</ion-label></ion-segment-button>
-          <ion-segment-button value="ACCEPTED_BY_CLIENT"><ion-label>Aceptados</ion-label></ion-segment-button>
-          <ion-segment-button value="ALL"><ion-label>Todos</ion-label></ion-segment-button>
-        </ion-segment>
-      </ion-toolbar>
+
     </ion-header>
 
     <ion-content class="ion-padding">
@@ -165,7 +154,10 @@ type Filter = OrderStatus | 'ALL';
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <div class="page-container">
+      <div class="page-container"><section class="dashboard-intro"><span class="eyebrow">Tu taller</span><h1>Ideas listas para cobrar vida.</h1><p>Organiza los pedidos, revisa sus detalles y prepara tu próxima cotización.</p></section>
+        <app-orders-toolbar [orders]="orders()" [(filters)]="filters" />
+        <p class="results-count" role="status">{{ visibleOrders().length }} de {{ orders().length }} pedidos</p>
+        @if (orders().length && !visibleOrders().length) { <div class="empty-state"><p>No hay pedidos que coincidan con estos filtros.</p></div> }
         @if (loading() && !orders().length) {
           <ion-card><ion-card-content>
             <ion-skeleton-text [animated]="true" style="width: 50%"></ion-skeleton-text>
@@ -180,7 +172,7 @@ type Filter = OrderStatus | 'ALL';
 
         <ion-grid>
           <ion-row>
-            @for (order of orders(); track order.id) {
+            @for (order of visibleOrders(); track order.id) {
               <ion-col size="12" sizeMd="6">
                 <ion-card>
                   <ion-card-header>
@@ -212,7 +204,14 @@ type Filter = OrderStatus | 'ALL';
                         @for (ref of order.webReferences; track ref.imageUrl) {
                           <figure>
                             <img [src]="ref.imageUrl" [alt]="ref.title" loading="lazy" />
-                            <figcaption>{{ ref.title }}</figcaption>
+                            <figcaption>
+                              {{ ref.title }}<br />
+                              {{ ref.creator || 'Autor no informado' }} · {{ ref.license || 'Licencia no informada' }}<br />
+                              {{ ref.source }}
+                              @if (ref.sourceUrl) {
+                                <br /><a [href]="ref.sourceUrl" target="_blank" rel="noopener noreferrer">Ver obra original y condiciones de uso</a>
+                              }
+                            </figcaption>
                           </figure>
                         }
                       </div>
@@ -251,6 +250,7 @@ type Filter = OrderStatus | 'ALL';
           </ion-header>
           <ion-content class="ion-padding">
             <form [formGroup]="calcForm" (ngSubmit)="submitQuote()">
+              @if (activeOrder()?.domain === 'general') { <p class="muted">Define materiales o recursos, mano de obra y costos fijos del encargo. El precio sugerido usa tus costos; no aplicamos reglas de otros rubros.</p> }
               <h3>Insumos</h3>
               <ion-grid formArrayName="items" class="ion-no-padding">
                 @for (group of itemsArray.controls; track group; let i = $index) {
@@ -317,7 +317,7 @@ type Filter = OrderStatus | 'ALL';
                           </ion-text>
                         }
                         <ion-button size="small" fill="clear" (click)="useSuggested()">Usar precio sugerido</ion-button>
-                        <ion-button size="small" fill="clear" (click)="loadRuleEstimate()">
+                        <ion-button size="small" fill="clear" (click)="loadRuleEstimate()" [disabled]="activeOrder()?.domain === 'general'">
                           <ion-icon slot="start" name="flash-outline"></ion-icon>Estimación por reglas
                         </ion-button>
                       </ion-card-content>
@@ -356,7 +356,8 @@ export class BakerDashboardComponent implements OnInit {
   readonly orders = signal<Order[]>([]);
   readonly loading = signal(false);
   readonly submitting = signal(false);
-  readonly filter = signal<Filter>('CONFIRMED_BY_CLIENT');
+  readonly filters = signal<OrderFilters>({ query: '', domain: 'ALL', status: 'CONFIRMED_BY_CLIENT' });
+  readonly visibleOrders = computed(() => filterOrders(this.orders(), this.filters()));
   readonly activeOrder = signal<Order | null>(null);
   readonly ruleEstimate = signal<number | null>(null);
   private readonly costInputs = signal<CostItem[]>([]);
@@ -379,7 +380,7 @@ export class BakerDashboardComponent implements OnInit {
     laborCost: [0, Validators.min(0)],
     fixedCosts: [0, Validators.min(0)],
     profitMargin: [30, [Validators.min(0), Validators.max(500)]],
-    finalPrice: [0, [Validators.required, Validators.min(1)]],
+    finalPrice: [0, [Validators.required, Validators.min(1), Validators.max(99999999.99)]],
     details: ['', [Validators.required, Validators.maxLength(2000)]],
   });
 
@@ -392,15 +393,9 @@ export class BakerDashboardComponent implements OnInit {
     this.load();
   }
 
-  setFilter(filter: Filter): void {
-    this.filter.set(filter);
-    this.load();
-  }
-
   load(done?: () => void): void {
-    const f = this.filter();
     this.loading.set(true);
-    this.orderService.getOrders(f === 'ALL' ? undefined : f).subscribe({
+    this.orderService.getOrders().subscribe({
       next: (orders) => {
         this.orders.set(orders);
         this.loading.set(false);
@@ -419,16 +414,16 @@ export class BakerDashboardComponent implements OnInit {
 
   openCalculator(order: Order): void {
     const attrs = order.attributes ?? {};
-    const quantity = parseInt(String(attrs['servings'] ?? attrs['size'] ?? '10'), 10) || 10;
+    const quantity = parseInt(String(attrs['quantity'] ?? attrs['servings'] ?? attrs['size'] ?? '1'), 10) || 10;
 
     this.itemsArray.clear({ emitEvent: false });
     for (const item of defaultItems(order.domain, quantity)) {
       this.itemsArray.push(this.itemGroup(item), { emitEvent: false });
     }
-    const design = attrs['theme'] ?? attrs['style'] ?? 'personalizado';
+    const design = attrs['service_type'] ?? attrs['theme'] ?? attrs['style'] ?? 'personalizado';
     this.calcForm.patchValue({
-      laborCost: order.domain === 'tattoo' ? 15000 * Math.ceil(quantity / 5) : 5000 + quantity * 100,
-      fixedCosts: 2000,
+      laborCost: order.domain === 'general' ? 0 : order.domain === 'tattoo' ? 15000 * Math.ceil(quantity / 5) : 5000 + quantity * 100,
+      fixedCosts: order.domain === 'general' ? 0 : 2000,
       profitMargin: 30,
       details: `Cotización para ${DOMAIN_LABELS[order.domain] ?? order.domain}. Diseño: ${design}.`,
     });
@@ -462,7 +457,7 @@ export class BakerDashboardComponent implements OnInit {
 
   loadRuleEstimate(): void {
     const order = this.activeOrder();
-    if (!order) return;
+    if (!order || order.domain === 'general') return;
     this.orderService.estimateQuote(order.id).subscribe({
       next: (res) => this.ruleEstimate.set(res.suggestedTotal),
       error: (err) => this.notify.show(apiErrorMessage(err, 'No se pudo calcular la estimación'), 'danger'),
@@ -495,7 +490,7 @@ export class BakerDashboardComponent implements OnInit {
         next: () => {
           this.submitting.set(false);
           this.activeOrder.set(null);
-          this.orders.update((list) => list.filter((o) => o.id !== order.id));
+          this.load();
           this.notify.show('Cotización enviada al cliente', 'success');
         },
         error: (err) => {
@@ -514,7 +509,7 @@ export class BakerDashboardComponent implements OnInit {
     return this.fb.group({
       name: [item.name],
       packageCost: [item.packageCost, Validators.min(0)],
-      packageQuantity: [item.packageQuantity, Validators.min(0)],
+      packageQuantity: [item.packageQuantity, Validators.min(0.000001)],
       unit: [item.unit],
       quantityUsed: [item.quantityUsed, Validators.min(0)],
     });

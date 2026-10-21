@@ -1,30 +1,116 @@
+import hmac
+import json
 import logging
+import os
+import re
+import time
+import uuid
+from datetime import UTC, datetime
+from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 from app.api import router
+from app.services.scraper import web_scraper
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("service-python")
+
+
+def log_structured(level: str, event: str, **kwargs: Any) -> None:
+    payload = {
+        "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "level": level,
+        "service": "service-python",
+        "event": event,
+        **kwargs,
+    }
+    msg = json.dumps(payload, ensure_ascii=False)
+    if level == "ERROR":
+        logger.error(msg)
+    elif level == "WARN":
+        logger.warning(msg)
+    else:
+        logger.info(msg)
+
 
 app = FastAPI(
     title="Servicio NLP y Referencias Web",
     description="Extrae atributos estructurados desde texto libre por rubro y obtiene referencias visuales de la Web.",
-    version="1.1.0",
+    version="1.2.0",
 )
+
+# Render Free usa HTTPS público entre servicios. La API NLP exige un secreto
+# compartido; /health permanece público para que el proveedor pueda comprobarla.
+SERVICE_TOKEN = os.environ.get("PYTHON_SERVICE_TOKEN", "")
+if os.environ.get("RENDER") == "true" and len(SERVICE_TOKEN) < 32:
+    raise RuntimeError("PYTHON_SERVICE_TOKEN debe contener al menos 32 caracteres en Render")
+
+
+@app.middleware("http")
+async def service_authentication(request: Request, call_next: Any) -> Response:
+    if request.url.path != "/health" and SERVICE_TOKEN:
+        supplied = request.headers.get("x-service-token", "")
+        if not hmac.compare_digest(supplied.encode(), SERVICE_TOKEN.encode()):
+            return JSONResponse(status_code=401, content={"detail": "No autorizado"})
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def correlation_and_logging_middleware(request: Request, call_next: Any) -> Response:
+    incoming_id = request.headers.get("x-correlation-id") or request.headers.get("x-request-id") or ""
+    correlation_id = incoming_id if re.fullmatch(r"[A-Za-z0-9._:-]{1,100}", incoming_id) else str(uuid.uuid4())
+    request.state.correlation_id = correlation_id
+    start = time.perf_counter()
+
+    response: Response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
+    response.headers["X-Correlation-Id"] = correlation_id
+
+    log_structured(
+        "INFO",
+        "http_request",
+        correlationId=correlation_id,
+        method=request.method,
+        path=request.url.path,
+        statusCode=response.status_code,
+        durationMs=duration_ms,
+    )
+    return response
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     # Los errores de validación (422) los maneja FastAPI; aquí solo lo inesperado.
-    logger.exception("Error no controlado en %s", request.url.path)
-    return JSONResponse(status_code=500, content={"detail": "Error interno del servicio NLP"})
+    correlation_id = getattr(request.state, "correlation_id", str(uuid.uuid4()))
+    log_structured(
+        "ERROR",
+        "unhandled_exception",
+        correlationId=correlation_id,
+        path=request.url.path,
+        error=str(exc),
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servicio NLP", "correlationId": correlation_id},
+        headers={"X-Correlation-Id": correlation_id},
+    )
 
 
 @app.get("/health")
-def health_check() -> dict:
-    return {"status": "ok", "service": "service-python"}
+def health_check() -> dict[str, Any]:
+    metrics = web_scraper.get_metrics()
+    return {
+        "status": "ok",
+        "service": "service-python",
+        "external_source": {
+            "provider": "openverse",
+            "status": metrics["source_status"],
+            "avg_latency_ms": metrics["avg_latency_ms"],
+            "cache_entries": metrics["active_cache_entries"],
+        },
+    }
 
 
 app.include_router(router, prefix="/api/v1")

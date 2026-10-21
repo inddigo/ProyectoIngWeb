@@ -14,13 +14,15 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Variables no sensibles: GitHub Actions Variables (Settings > Variables) con valores por defecto
   NODE_VERSION: ${{ vars.NODE_VERSION || '22' }}
   PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
   TERRAFORM_VERSION: ${{ vars.TERRAFORM_VERSION || '1.9.8' }}
+  STAGING_URL: ${{ vars.STAGING_URL || '' }}
+
 
 jobs:
   # ---------------------------------------------------------------- Seguridad
@@ -72,8 +74,8 @@ jobs:
       - name: Pruebas unitarias con cobertura
         run: npm run test:cov
       - run: npm run build
-      - name: Auditoría de dependencias (bloquea HIGH/CRITICAL)
-        run: npm audit --audit-level=high
+      - name: Auditoría de dependencias de runtime (bloquea HIGH/CRITICAL)
+        run: npm audit --omit=dev --audit-level=high
 
   # ---------------------------------------------------------------- Frontend
   frontend:
@@ -120,6 +122,8 @@ jobs:
         run: ruff check . && ruff format --check .
       - name: Pruebas unitarias con cobertura
         run: pytest --cov=app --cov-report=term-missing
+      - name: Seguridad del despliegue (plan gratuito y SHA correcto)
+        run: python -m unittest discover -s ../scripts -p test_deploy_render.py
       - name: Auditoría de dependencias (pip-audit)
         run: pip-audit -r requirements.txt
 
@@ -129,10 +133,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: terraform
+        working-directory: terraform/render
     env:
-      TF_VAR_db_password: ${{ secrets.DB_PASSWORD || 'ci-placeholder' }}
-      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET || 'ci-placeholder' }}
+      RENDER_API_KEY: offline-plan
+      RENDER_OWNER_ID: usr-offlineplan
+      TF_VAR_database_url: postgresql://offline:offline@example.invalid/db?sslmode=require
+      TF_VAR_jwt_secret: '00000000000000000000000000000000'
+      TF_VAR_python_service_token: '00000000000000000000000000000000'
+      TF_VAR_seed_baker_password: ci-placeholder-long-password
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -141,15 +149,8 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false -input=false
       - run: terraform validate
-      - name: Terraform plan (staging)
-        env:
-          # Sin credenciales GCP se ejecuta un plan "offline" (sin refrescar estado)
-          # que verifica la configuración completa sin tocar la nube.
-          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ secrets.GCP_ACCESS_TOKEN || 'offline-plan' }}
-        run: |
-          terraform plan -input=false -refresh=false -lock=false \
-            -var-file=environments/staging.tfvars.example \
-            -var "project_id=${{ vars.GCP_PROJECT_ID || 'cotiza-staging' }}"
+      - name: Plan sin conexión (sin crear recursos)
+        run: terraform plan -input=false -refresh=false -lock=false
 
   # ------------------------------------------- Imágenes + integración (gated)
   docker:
@@ -158,8 +159,11 @@ jobs:
     # No se construyen imágenes si falla cualquier etapa crítica anterior.
     needs: [secrets-scan, sast, backend, frontend, python, terraform]
     env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      EVIDENCE_DIR: ep2-ci-evidence
+      VERIFY_PROXY_HOST: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Construir imágenes
@@ -198,6 +202,12 @@ jobs:
         run: docker compose up -d --wait --wait-timeout 180
       - name: Prueba de humo de extremo a extremo
         run: ./scripts/smoke-test.sh http://localhost:8080
+      - name: Evidencia de integración (fuente sintética)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ep2-ci-evidence
+          path: ep2-ci-evidence
+          retention-days: 14
       - name: Logs ante fallo
         if: failure()
         run: |
@@ -207,3 +217,49 @@ jobs:
       - name: Detener stack
         if: always()
         run: docker compose down -v
+
+  # ------------------------------------------- Despliegue en Staging (gated)
+  deploy-staging:
+    name: Despliegue en Staging y verificación de salud
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    concurrency:
+      group: cotiza-staging
+      cancel-in-progress: false
+    environment: staging
+    permissions:
+      contents: read
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_NLP_SERVICE_ID: ${{ vars.RENDER_NLP_SERVICE_ID }}
+      RENDER_API_SERVICE_ID: ${{ vars.RENDER_API_SERVICE_ID }}
+      RENDER_WEB_SERVICE_ID: ${{ vars.RENDER_WEB_SERVICE_ID }}
+      STAGING_URL: ${{ vars.STAGING_URL }}
+      NLP_URL: ${{ vars.NLP_URL }}
+      API_URL: ${{ vars.API_URL }}
+      SEED_BAKER_PASSWORD: ${{ secrets.SEED_BAKER_PASSWORD }}
+      APP_REVISION: ${{ github.sha }}
+      EXPECTED_REVISION: ${{ github.sha }}
+      REQUIRE_REAL_WEB: '1'
+      EVIDENCE_DIR: ep2-staging-evidence
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Instalar cliente HTTPS del despliegue
+        run: python3 -m pip install httpx==0.28.1
+      - name: Desplegar el commit aprobado y despertar servicios gratuitos
+        run: |
+          test -n "$SEED_BAKER_PASSWORD" || { echo '::error::Falta SEED_BAKER_PASSWORD'; exit 1; }
+          python3 scripts/deploy-render.py
+      - name: Verificar flujo real y guardar evidencia
+        run: |
+          bash scripts/smoke-test.sh "$STAGING_URL"
+          echo "Staging verificado: $STAGING_URL ($APP_REVISION)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Evidencia del staging real
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ep2-staging-evidence
+          path: ep2-staging-evidence
+          if-no-files-found: warn
+          retention-days: 30

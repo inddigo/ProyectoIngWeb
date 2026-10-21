@@ -64,6 +64,7 @@ import {
 } from '../../shared/attributes';
 
 const PLACEHOLDERS: Record<Domain, string> = {
+  general: 'Ej: Necesito 2 repisas de madera para el 2026-12-20, con entrega a domicilio',
   cake: 'Ej: Quiero una torta vegana de chocolate para 20 personas con temática de Batman',
   tattoo: 'Ej: Quiero un tatuaje de 15 cm en el antebrazo a color',
 };
@@ -103,11 +104,11 @@ const PLACEHOLDERS: Record<Domain, string> = {
   ],
   template: `
     <ion-header>
-      <ion-toolbar color="primary">
-        <ion-title>Cotiza · Pedidos personalizados</ion-title>
+      <ion-toolbar>
+        <ion-title><a class="brand-link" routerLink="/" aria-label="Cotiza, inicio"><span class="brand-word">cotiza<span class="brand-dot" aria-hidden="true">.</span></span><span class="brand-caption">Ideas únicas. Pedidos a tu medida.</span></a></ion-title>
         <ion-buttons slot="end">
           @if (auth.currentUser(); as user) {
-            <ion-button [routerLink]="auth.homeFor(user)">
+            <ion-button [routerLink]="auth.homeFor(user)" [attr.aria-label]="user.role === 'BAKER' ? 'Panel del profesional' : 'Mis pedidos'">
               <ion-icon slot="start" name="list-outline"></ion-icon>
               <span class="ion-hide-sm-down">{{ user.role === 'BAKER' ? 'Panel' : 'Mis pedidos' }}</span>
             </ion-button>
@@ -125,19 +126,35 @@ const PLACEHOLDERS: Record<Domain, string> = {
     </ion-header>
 
     <ion-content class="ion-padding">
-      <div class="page-container">
+      <div class="page-container portal-container">
+        <nav class="journey" aria-label="Etapas de tu pedido">
+          <span [class.active]="!structured()"><b>01</b> Tu idea</span><i aria-hidden="true"></i>
+          <span [class.active]="structured()"><b>02</b> Los detalles</span><i aria-hidden="true"></i>
+          <span><b>03</b> Tu cotización</span>
+        </nav>
         <ion-grid>
           <ion-row>
+            @if (!structured()) {
+              <ion-col size="12" sizeLg="5" class="intro-column">
+                <span class="eyebrow">Pedidos personalizados, sin enredos</span>
+                <h1>Tu idea,<br />lista para <em>cotizar.</em></h1>
+                <p class="intro-copy">Cada trabajo a medida empieza con una conversación. Cotiza ordena lo que necesitas, reúne referencias y ayuda al profesional a calcular un precio según sus costos.</p>
+                <p class="studio-context">Para quienes crean, diseñan y trabajan por encargo: desde un taller o un estudio hasta un proyecto independiente.</p>
+                <img class="idea-illustration" src="/idea-studio.svg" alt="" width="300" height="190" />
+                <div class="intro-detail">Tú tienes la última palabra en cada detalle.</div>
+              </ion-col>
+            }
             <!-- Entrada en lenguaje natural -->
-            <ion-col size="12" [sizeLg]="structured() ? '5' : '12'">
-              <ion-card>
+            <ion-col size="12" [sizeLg]="structured() ? '5' : '7'">
+              <ion-card class="request-card">
                 <ion-card-header>
-                  <ion-card-title>Describe lo que necesitas</ion-card-title>
-                  <ion-card-subtitle>La IA convertirá tu mensaje en un formulario estructurado</ion-card-subtitle>
+                  <div class="step-label">01 / TU IDEA</div><ion-card-title>Cuéntanos qué tienes en mente</ion-card-title>
+                  <ion-card-subtitle>Describe tu encargo con tus palabras. Revisa los detalles antes de enviarlos al profesional.</ion-card-subtitle>
                 </ion-card-header>
                 <ion-card-content>
                   <form [formGroup]="requestForm" (ngSubmit)="structure()">
-                    <ion-segment formControlName="domain" aria-label="Tipo de servicio">
+                    <p class="available-domains">Rubros disponibles en esta versión</p>
+                    <ion-segment formControlName="domain" aria-label="Rubro de tu pedido">
                       @for (d of domains; track d) {
                         <ion-segment-button [value]="d">
                           <ion-label>{{ domainLabels[d] }}</ion-label>
@@ -145,8 +162,8 @@ const PLACEHOLDERS: Record<Domain, string> = {
                       }
                     </ion-segment>
 
-                    <ion-list lines="none" class="ion-margin-top">
-                      <ion-item>
+                    <div class="request-fields">
+                      <div class="field-block">
                         <ion-textarea
                           formControlName="rawText"
                           label="Tu pedido"
@@ -159,8 +176,9 @@ const PLACEHOLDERS: Record<Domain, string> = {
                           [placeholder]="placeholder()"
                           errorText="Describe tu pedido con al menos 10 caracteres"
                         ></ion-textarea>
-                      </ion-item>
-                      <ion-item>
+                      </div>
+                      <button type="button" class="example-button" (click)="requestForm.controls.rawText.setValue(placeholder().replace('Ej: ', ''))">¿No sabes por dónde empezar? Usa un ejemplo ↗</button>
+                      <div class="field-block">
                         <ion-input
                           formControlName="referenceImage"
                           type="url"
@@ -169,20 +187,21 @@ const PLACEHOLDERS: Record<Domain, string> = {
                           labelPlacement="stacked"
                           fill="outline"
                           placeholder="https://..."
-                          errorText="Debe ser una URL que empiece con http:// o https://"
+                          errorText="Debe ser una URL HTTPS válida"
                         ></ion-input>
-                      </ion-item>
-                    </ion-list>
+                      </div>
+                    </div>
 
-                    <ion-button type="submit" expand="block" [disabled]="loading()">
+                    <ion-button type="submit" class="primary-action" expand="block" [disabled]="loading()">
                       @if (loading()) {
                         <ion-spinner slot="start" name="dots"></ion-spinner>
-                        Procesando con IA...
+                        Organizando tu idea...
                       } @else {
                         <ion-icon slot="start" name="sparkles-outline"></ion-icon>
-                        Estructurar pedido
+                        Dar forma a mi pedido
                       }
                     </ion-button>
+                    <p class="form-assurance">El profesional recibe tu pedido solo cuando lo confirmas.</p>
                   </form>
                 </ion-card-content>
               </ion-card>
@@ -193,7 +212,7 @@ const PLACEHOLDERS: Record<Domain, string> = {
               <ion-col size="12" sizeLg="7">
                 <ion-card>
                   <ion-card-header>
-                    <ion-card-title>Revisa los datos extraídos</ion-card-title>
+                    <div class="step-label">02 / LOS DETALLES</div><ion-card-title>Así empieza a tomar forma</ion-card-title>
                     <ion-card-subtitle>
                       Confianza de la IA:
                       <ion-badge [color]="confidenceColor()">{{ confidence() | percent }}</ion-badge>
@@ -225,8 +244,21 @@ const PLACEHOLDERS: Record<Domain, string> = {
                       </ion-list>
                     </form>
 
+                    @if (data.extraction_meta?.fallback_used) {
+                      <ion-text color="warning">
+                        <p>No se pudieron recuperar referencias de la fuente externa. Puedes continuar con tu pedido sin imágenes.</p>
+                      </ion-text>
+                    }
                     @if (data.web_references.length) {
                       <h3>Referencias visuales encontradas en la Web</h3>
+                      @if (data.extraction_meta; as meta) {
+                        <p class="muted">
+                          <ion-note>
+                            Consulta: "{{ meta.query_used }}" · {{ meta.valid_count }} válidas de {{ meta.raw_count }} · {{ meta.returned_count }} mostradas ({{ meta.duplicates_removed }} duplicadas filtradas) · {{ meta.latency_ms }} ms
+                            {{ meta.cache_hit ? '· caché TTL' : '' }}
+                          </ion-note>
+                        </p>
+                      }
                       <div class="references">
                         @for (ref of data.web_references; track ref.image_url) {
                           <figure>
@@ -234,11 +266,17 @@ const PLACEHOLDERS: Record<Domain, string> = {
                             <figcaption>
                               {{ ref.title }}<br />
                               <ion-note>{{ ref.source }}</ion-note>
+                              <br />
+                              <span>{{ ref.creator || 'Autor no informado' }} · {{ ref.license || 'Licencia no informada' }}</span>
+                              @if (ref.source_url) {
+                                <br /><a [href]="ref.source_url" target="_blank" rel="noopener noreferrer">Ver obra original y condiciones de uso</a>
+                              }
                             </figcaption>
                           </figure>
                         }
                       </div>
                     }
+
 
                     <ion-row class="ion-margin-top">
                       <ion-col size="12" sizeMd="8">
@@ -260,6 +298,7 @@ const PLACEHOLDERS: Record<Domain, string> = {
             }
           </ion-row>
         </ion-grid>
+        <footer class="portal-footer"><strong>De una idea a algo muy tuyo.</strong><span>Describe · Revisa · Cotiza</span></footer>
       </div>
     </ion-content>
   `,
@@ -272,13 +311,13 @@ export class CustomerPortalComponent implements OnInit {
   private readonly notify = inject(NotificationService);
   private readonly router = inject(Router);
 
-  readonly domains: Domain[] = ['cake', 'tattoo'];
+  readonly domains: Domain[] = ['general', 'cake', 'tattoo'];
   readonly domainLabels = DOMAIN_LABELS;
 
   readonly requestForm = this.fb.group({
-    domain: this.fb.control<Domain>('cake'),
+    domain: this.fb.control<Domain>('general'),
     rawText: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(2000)]],
-    referenceImage: ['', Validators.pattern(/^https?:\/\/\S+$/)],
+    referenceImage: ['', Validators.pattern(/^https:\/\/\S+$/)],
   });
   attributesForm = new FormGroup<Record<string, FormControl<string>>>({});
 
@@ -286,7 +325,7 @@ export class CustomerPortalComponent implements OnInit {
   readonly sending = signal(false);
   readonly structured = signal<StructuredOrder | null>(null);
   readonly attributeKeys = signal<string[]>([]);
-  private readonly selectedDomain = signal<Domain>('cake');
+  private readonly selectedDomain = signal<Domain>('general');
 
   readonly placeholder = computed(() => PLACEHOLDERS[this.selectedDomain()]);
   readonly confidence = computed(
@@ -336,6 +375,11 @@ export class CustomerPortalComponent implements OnInit {
   confirm(): void {
     const data = this.structured();
     if (!data) return;
+    if (this.attributesForm.invalid) {
+      this.attributesForm.markAllAsTouched();
+      this.notify.show('Revisa los campos: cantidades entre 1 y 10000 y textos de hasta 200 caracteres.', 'warning');
+      return;
+    }
 
     if (!this.auth.hasRole('CLIENT')) {
       if (this.auth.hasRole('BAKER')) {
@@ -364,8 +408,14 @@ export class CustomerPortalComponent implements OnInit {
           title: r.title,
           imageUrl: r.image_url,
           source: r.source,
+          sourceUrl: r.source_url,
+          license: r.license,
+          creator: r.creator,
+          queryUsed: r.query_used,
+          retrievedAt: r.retrieved_at,
         })),
       })
+
       .subscribe({
         next: () => {
           this.sending.set(false);
@@ -399,6 +449,7 @@ export class CustomerPortalComponent implements OnInit {
     for (const [key, value] of entries) {
       controls[key] = new FormControl(formatAttribute(value).replace(/^—$/, ''), {
         nonNullable: true,
+        validators: typeof value === 'number' ? [Validators.required, Validators.min(1), Validators.max(10000), Validators.pattern(/^\d+$/)] : key === 'service_type' ? [Validators.required, Validators.minLength(2), Validators.maxLength(200)] : [Validators.maxLength(200)],
       });
     }
     this.attributesForm = new FormGroup(controls);

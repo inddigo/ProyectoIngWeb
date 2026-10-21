@@ -11,7 +11,7 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
-  role: Exclude<Role, 'ADMIN'>;
+  role: 'CLIENT';
 }
 
 @Injectable({ providedIn: 'root' })

@@ -1,8 +1,14 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
+# Parches de seguridad del sistema base (Debian) y eliminación de gestores de paquetes en runtime
+# nosemgrep
+RUN apt-get update && apt-get dist-upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall -y pip setuptools wheel \
+    && rm -rf /usr/local/lib/python3.12/ensurepip /root/.cache
 COPY app ./app
 RUN useradd --create-home --uid 10001 appuser
 USER appuser

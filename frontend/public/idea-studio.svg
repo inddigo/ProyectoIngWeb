@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="225" viewBox="0 0 360 225" fill="none">
+  <rect x="31" y="36" width="204" height="151" rx="18" transform="rotate(-7 31 36)" fill="#E9EEDC"/>
+  <rect x="68" y="23" width="210" height="164" rx="17" transform="rotate(5 68 23)" fill="#EEE1BC"/>
+  <rect x="51" y="25" width="210" height="165" rx="17" fill="#F7F5E9" stroke="#D4DCC2"/>
+  <rect x="75" y="48" width="63" height="61" rx="10" fill="#E0E9D4"/>
+  <path d="M88 91L101 75L112 84L124 67M88 98H126" stroke="#38634C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="94" cy="63" r="5" fill="#D79256"/>
+  <path d="M153 58H230M153 72H218M153 88H228M76 131H173M76 145H206M76 159H150" stroke="#8DAB7C" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="239" cy="168" r="31" fill="#D9E8B0"/>
+  <path d="M226 168L235 177L253 158" stroke="#38634C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M288 43L292 55L304 59L292 63L288 75L284 63L272 59L284 55L288 43Z" fill="#86A65A"/>
+  <path d="M24 107L26 114L33 116L26 118L24 125L22 118L15 116L22 114L24 107Z" fill="#B7C694"/>
+  <path d="M288 142L318 108L328 118L298 152L284 158L288 142Z" fill="#F0E9CF" stroke="#38634C" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M312 115L322 125M288 142L298 152" stroke="#38634C" stroke-width="2.5"/>
+</svg>

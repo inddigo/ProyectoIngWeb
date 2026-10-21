@@ -11,13 +11,14 @@ RUN npx prisma generate && npm run build && npm prune --omit=dev
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apk add --no-cache openssl \
+RUN apk upgrade --no-cache && apk add --no-cache openssl \
     # npm no se usa en runtime: se elimina para reducir superficie de ataque
     && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
               /opt/yarn* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/dist ./dist
-COPY --chown=node:node package.json start.sh ./
+COPY --chown=node:node package.json ./
+COPY --chown=node:node --chmod=755 start.sh ./
 COPY --chown=node:node prisma ./prisma
 USER node
 EXPOSE 3000

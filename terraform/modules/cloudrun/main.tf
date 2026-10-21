@@ -8,6 +8,10 @@ resource "google_cloud_run_v2_service" "service" {
   name     = var.service_name
   location = var.region
   ingress  = var.ingress
+  depends_on = [
+    google_secret_manager_secret_iam_member.service_secrets,
+    google_project_iam_member.cloudsql,
+  ]
 
   template {
     service_account = google_service_account.service.email
@@ -29,6 +33,16 @@ resource "google_cloud_run_v2_service" "service" {
 
     containers {
       image = var.image
+      resources {
+        limits = { cpu = "1", memory = var.memory }
+      }
+      startup_probe {
+        initial_delay_seconds = 0
+        timeout_seconds       = 5
+        period_seconds        = 10
+        failure_threshold     = 24
+        tcp_socket { port = var.port }
+      }
 
       ports {
         container_port = var.port
@@ -64,6 +78,20 @@ resource "google_cloud_run_v2_service" "service" {
       }
     }
   }
+}
+
+resource "google_secret_manager_secret_iam_member" "service_secrets" {
+  for_each  = var.secret_env_vars
+  secret_id = each.value
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.service.email}"
+}
+
+resource "google_project_iam_member" "cloudsql" {
+  count   = length(var.cloudsql_instances) > 0 ? 1 : 0
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.service.email}"
 }
 
 resource "google_cloud_run_v2_service_iam_member" "public" {

@@ -1,4 +1,4 @@
-export type Domain = 'cake' | 'tattoo';
+export type Domain = 'general' | 'cake' | 'tattoo';
 
 export type OrderStatus =
   | 'DRAFT'
@@ -6,17 +6,40 @@ export type OrderStatus =
   | 'CONFIRMED_BY_CLIENT'
   | 'QUOTED'
   | 'ACCEPTED_BY_CLIENT'
-  | 'REJECTED_BY_CLIENT';
+  | 'REJECTED_BY_CLIENT'
+  | 'CANCELLED_BY_CLIENT';
 
 export type AttributeValue = string | number | string[];
 export type Attributes = Record<string, AttributeValue>;
+
+export interface ExtractionMeta {
+  query_used: string;
+  raw_count: number;
+  valid_count: number;
+  returned_count: number;
+  invalid_dropped: number;
+  duplicates_removed: number;
+  cache_hit: boolean;
+  fallback_used: boolean;
+  latency_ms: number;
+}
 
 /** Respuesta del motor NLP (contrato snake_case del servicio Python). */
 export interface StructuredOrder {
   raw_text: string;
   domain: Domain;
   entities: Attributes & { confidence_score?: number };
-  web_references: { title: string; image_url: string; source: string }[];
+  web_references: {
+    title: string;
+    image_url: string;
+    source: string;
+    source_url?: string;
+    license?: string;
+    creator?: string;
+    query_used?: string;
+    retrieved_at?: string;
+  }[];
+  extraction_meta?: ExtractionMeta;
   fallback?: boolean;
 }
 
@@ -24,7 +47,13 @@ export interface WebReference {
   title: string;
   imageUrl: string;
   source: string;
+  sourceUrl?: string;
+  license?: string;
+  creator?: string;
+  queryUsed?: string;
+  retrievedAt?: string;
 }
+
 
 export interface Quote {
   id: string;
@@ -69,6 +98,7 @@ export interface QuoteEstimate {
 }
 
 export const DOMAIN_LABELS: Record<Domain, string> = {
+  general: 'Encargos generales',
   cake: 'Pastelería',
   tattoo: 'Tatuajes',
 };
@@ -80,6 +110,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   QUOTED: 'Cotización recibida',
   ACCEPTED_BY_CLIENT: 'Aceptado',
   REJECTED_BY_CLIENT: 'Rechazado',
+  CANCELLED_BY_CLIENT: 'Cancelado',
 };
 
 export const STATUS_COLORS: Record<OrderStatus, string> = {
@@ -89,4 +120,5 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
   QUOTED: 'primary',
   ACCEPTED_BY_CLIENT: 'success',
   REJECTED_BY_CLIENT: 'danger',
+  CANCELLED_BY_CLIENT: 'medium',
 };

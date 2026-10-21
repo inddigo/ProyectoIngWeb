@@ -24,6 +24,7 @@ enum OrderStatus {
   QUOTED
   ACCEPTED_BY_CLIENT
   REJECTED_BY_CLIENT
+  CANCELLED_BY_CLIENT
 }
 
 model User {
@@ -63,17 +64,27 @@ model Order {
 }
 
 model WebReference {
-  id        String   @id @default(uuid())
-  orderId   String   @map("order_id")
-  title     String
-  imageUrl  String   @map("image_url")
-  source    String
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  orderId     String   @map("order_id")
+  title       String
+  imageUrl    String   @map("image_url")
+  source      String
+  sourceUrl   String?  @map("source_url")
+  license     String?
+  creator     String?
+  queryUsed   String?  @map("query_used")
+  retrievedAt DateTime @default(now()) @map("retrieved_at")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
+  @@unique([orderId, imageUrl])
+  @@index([orderId])
+  @@index([source])
+  @@index([queryUsed])
   @@map("web_references")
 }
+
 
 model Quote {
   id             String   @id @default(uuid())

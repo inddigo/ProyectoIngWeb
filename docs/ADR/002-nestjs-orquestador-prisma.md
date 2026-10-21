@@ -6,7 +6,7 @@ Aceptado
 ## Contexto
 Se necesita un backend que concentre autenticación, reglas del ciclo de vida del pedido,
 persistencia y la comunicación con el servicio de NLP. Los atributos de un pedido cambian según
-el rubro (pastel ≠ tatuaje).
+el rubro (encargo general, pastelería o tatuaje).
 
 ## Decisión
 - **NestJS 11** organizado en módulos (`auth`, `users`, `orders`, `quotes`, `nlp`, `health`,
@@ -21,4 +21,4 @@ el rubro (pastel ≠ tatuaje).
 - (+) Agregar un rubro no requiere migrar el esquema.
 - (+) Cambios de esquema trazables y reproducibles en CI y staging.
 - (−) Los atributos JSON no tienen restricciones a nivel de base de datos; se validan en el
-  servicio Python y en la interfaz.
+  servicio Python, DTOs de NestJS y la interfaz.

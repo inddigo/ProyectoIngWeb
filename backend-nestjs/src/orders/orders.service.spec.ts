@@ -12,26 +12,78 @@ describe('OrdersService', () => {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    webReference: {
+      findMany: jest.fn(),
     },
   };
   const service = new OrdersService(prisma as any);
 
-  beforeEach(() => jest.resetAllMocks());
+  beforeEach(() => {
+    jest.resetAllMocks();
+    prisma.order.updateMany.mockResolvedValue({ count: 1 });
+  });
 
-  it('crea el pedido como CONFIRMED_BY_CLIENT asociado al cliente', async () => {
+  it('crea el pedido como CONFIRMED_BY_CLIENT y deduplica referencias web por imageUrl', async () => {
     prisma.order.create.mockResolvedValue({ id: 'o1' });
     await service.create('client-1', {
       rawText: 'torta para 20',
       domain: 'cake',
       attributes: { servings: 20 },
       webReferences: [
-        { title: 't', imageUrl: 'https://img.cl/a.jpg', source: 'web' },
+        {
+          title: 't1',
+          imageUrl: 'https://img.cl/a.jpg',
+          source: 'Openverse',
+          license: 'CC BY 4.0',
+          queryUsed: 'batman cake',
+        },
+        {
+          title: 't1 duplicada',
+          imageUrl: 'https://IMG.cl/a.jpg ',
+          source: 'Openverse',
+        },
       ],
     });
     const { data } = prisma.order.create.mock.calls[0][0];
     expect(data.clientId).toBe('client-1');
     expect(data.status).toBe('CONFIRMED_BY_CLIENT');
     expect(data.webReferences.create).toHaveLength(1);
+    expect(data.webReferences.create[0].license).toBe('CC BY 4.0');
+  });
+
+  it('consulta referencias web indexadas con filtros de búsqueda y dominio', async () => {
+    prisma.webReference.findMany.mockResolvedValue([{ id: 'r1' }]);
+    const res = await service.searchWebReferences(
+      {
+        q: 'batman',
+        domain: 'cake',
+        source: 'Openverse',
+      },
+      { userId: 'b1', email: 'b@test.cl', role: 'BAKER' },
+    );
+    expect(res).toEqual([{ id: 'r1' }]);
+    expect(prisma.webReference.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          order: { domain: 'cake' },
+        }),
+      }),
+    );
+  });
+
+  it('limita la búsqueda de referencias del cliente a sus propios pedidos', async () => {
+    prisma.webReference.findMany.mockResolvedValue([]);
+    await service.searchWebReferences(
+      {},
+      { userId: 'c1', email: 'c@test.cl', role: 'CLIENT' },
+    );
+    expect(prisma.webReference.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ order: { clientId: 'c1' } }),
+      }),
+    );
   });
 
   describe('decide', () => {
@@ -43,7 +95,7 @@ describe('OrdersService', () => {
       });
       prisma.order.update.mockResolvedValue({ status: 'ACCEPTED_BY_CLIENT' });
       await service.decide('o1', 'c1', 'ACCEPTED_BY_CLIENT');
-      expect(prisma.order.update).toHaveBeenCalledWith(
+      expect(prisma.order.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({ data: { status: 'ACCEPTED_BY_CLIENT' } }),
       );
     });
@@ -85,5 +137,47 @@ describe('OrdersService', () => {
         role: 'CLIENT',
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('cancela solo un pedido propio pendiente y conserva su historial', async () => {
+    prisma.order.findUnique.mockResolvedValue({
+      id: 'o1',
+      clientId: 'c1',
+      status: 'CONFIRMED_BY_CLIENT',
+    });
+    await service.cancel('o1', 'c1');
+    expect(prisma.order.updateMany).toHaveBeenCalledWith({
+      where: { id: 'o1', clientId: 'c1', status: 'CONFIRMED_BY_CLIENT' },
+      data: { status: 'CANCELLED_BY_CLIENT' },
+    });
+  });
+
+  it('no permite cancelar pedidos ajenos ni cotizados', async () => {
+    prisma.order.findUnique.mockResolvedValue({
+      clientId: 'otro',
+      status: 'CONFIRMED_BY_CLIENT',
+    });
+    await expect(service.cancel('o1', 'c1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    prisma.order.findUnique.mockResolvedValue({
+      clientId: 'c1',
+      status: 'QUOTED',
+    });
+    await expect(service.cancel('o1', 'c1')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(prisma.order.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('no sobrescribe una decisión o cotización concurrente', async () => {
+    prisma.order.findUnique.mockResolvedValue({
+      clientId: 'c1',
+      status: 'CONFIRMED_BY_CLIENT',
+    });
+    prisma.order.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.cancel('o1', 'c1')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 });

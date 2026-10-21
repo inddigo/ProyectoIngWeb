@@ -1,6 +1,11 @@
 import { Attributes, AttributeValue } from '../core/models/order.model';
 
 const LABELS: Record<string, string> = {
+  service_type: 'Tipo de trabajo',
+  quantity: 'Cantidad de unidades',
+  materials: 'Materiales o recursos',
+  deadline: 'Plazo o fecha deseada',
+  delivery: 'Modalidad de entrega',
   servings: 'Porciones',
   theme: 'Temática',
   dietary_restrictions: 'Restricciones',

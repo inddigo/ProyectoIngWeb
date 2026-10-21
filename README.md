@@ -105,7 +105,7 @@ Documentación OpenAPI interactiva generada automáticamente por FastAPI en `htt
 | Método | Ruta | Entrada / Contrato | Respuesta estructurada |
 |---|---|---|---|
 | `GET` | `/health` | Cabecera opcional `X-Correlation-Id` | `{"status": "ok", "service": "service-python", "external_source": {"provider": "openverse", "status": "ready", "avg_latency_ms": ..., "cache_entries": ...}}` |
-| `POST` | `/api/v1/nlp/structure-order` | `{"raw_text": string (5..2000), "domain": "cake" \| "tattoo"}` | `{"raw_text", "domain", "entities": {..., "confidence_score"}, "web_references": [{"title", "image_url", "source", "source_url", "license", "creator", "query_used", "retrieved_at"}], "extraction_meta": {"query_used", "raw_count", "valid_count", "invalid_dropped", "duplicates_removed", "cache_hit", "fallback_used", "latency_ms"}}` |
+| `POST` | `/api/v1/nlp/structure-order` | `{"raw_text": string (5..2000), "domain": "general" \| "cake" \| "tattoo"}` | `{"raw_text", "domain", "entities": {..., "confidence_score"}, "web_references": [{"title", "image_url", "source", "source_url", "license", "creator", "query_used", "retrieved_at"}], "extraction_meta": {"query_used", "raw_count", "valid_count", "invalid_dropped", "duplicates_removed", "cache_hit", "fallback_used", "latency_ms"}}` |
 | `GET` | `/api/v1/nlp/metrics` | Sin parámetros | `{"web_retrieval": {"valid_records_rate_pct", "duplicate_rate_pct", "avg_latency_ms", "cache_hit_rate_pct", "fallback_rate_pct", ...}, "nlp_benchmark": {"benchmark_cases": 6, "evaluated_fields": 21, "matched_fields": 21, "entity_extraction_accuracy_pct": 100.0}}` |
 
 ---

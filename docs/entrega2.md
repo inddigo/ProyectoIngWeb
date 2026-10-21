@@ -37,7 +37,7 @@ Validación actualizada el 21 de octubre de 2026:
 - Cambios EP2: https://github.com/inddigo/ProyectoIngWeb/pull/14
 - Tablero: https://github.com/users/inddigo/projects/3
 - Prototipo: https://www.figma.com/design/u0EsbFF2IfE2B7LOor9WzQ/E1?node-id=3-90
-- Nombre propuesto de versión: `v0.2.1-ep2`.
+- Nombre propuesto de versión: `v0.2.2-ep2`.
 - Staging: https://cotiza-ep2-web.onrender.com. Operación y caducidad de la credencial CI: [staging.md](staging.md).
 
 Publicar el tag/release sobre el SHA corregido, con sus pruebas aprobadas y evidencia de staging. Un borrador no es todavía una entrega publicada. No etiquetar el antiguo `main` que solo contiene EP1.
@@ -58,7 +58,7 @@ El historial ya registra aportes de Ferfishy, Joshua/Joshua Villavicencio y Germ
 
 ## Publicación de la versión evaluable
 
-La versión se publica como `v0.2.1-ep2` desde el commit corregido de la rama `ep2-integracion-web`. El tag identifica el código evaluable; no es necesario cambiar el antiguo `main` para que el tag sea válido. La PR #14 conserva la revisión y permite integrar después esa misma versión.
+La versión se publica como `v0.2.2-ep2` desde el commit corregido de la rama `ep2-integracion-web`. El tag identifica el código evaluable; no es necesario cambiar el antiguo `main` para que el tag sea válido. La PR #14 conserva la revisión y permite integrar después esa misma versión.
 
 El pipeline del tag debe aprobar todas las etapas, incluido el despliegue y `ep2-staging-evidence`. La release publicada incluye los enlaces al staging, ejecución aprobada, tablero y Figma. El historial y los aportes del equipo se deben explicar durante la demostración.
 

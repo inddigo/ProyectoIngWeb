@@ -7,7 +7,7 @@ Los diagramas usan [Mermaid](https://mermaid.js.org/) y GitHub los renderiza dir
 ```mermaid
 flowchart LR
     cliente(["👤 Cliente final<br/>describe su pedido en texto libre"])
-    prof(["👩‍🍳 Profesional<br/>pastelero, tatuador, ..."])
+    prof(["👩‍🍳 Profesional<br/>trabajos por encargo"])
     sistema["<b>Cotiza</b><br/>Plataforma de cotización inteligente<br/>para servicios personalizados"]
     openverse[("Openverse API<br/>imágenes CC")]
 
@@ -25,7 +25,7 @@ flowchart TB
         android["App Android<br/>(Capacitor)"]
     end
 
-    subgraph plataforma["Plataforma (Docker Compose / Cloud Run)"]
+    subgraph plataforma["Plataforma (Docker Compose / Render Free + Neon)"]
         fe["<b>Frontend</b><br/>Angular 20 + Ionic 8<br/>servido por nginx :8080<br/>proxy /api /auth /health"]
         be["<b>Backend orquestador</b><br/>NestJS 11 :3000<br/>Auth JWT · Pedidos · Cotizaciones · Salud"]
         py["<b>Servicio NLP</b><br/>FastAPI + spaCy :8000<br/>Extracción por rubro · Referencias web"]
@@ -35,9 +35,9 @@ flowchart TB
     ext[("Openverse API")]
 
     web -- "HTTPS (mismo origen)" --> fe
-    android -- "HTTPS REST + JWT" --> be
+    android -- "HTTPS REST + JWT" --> fe
     fe -- "REST JSON + JWT" --> be
-    be -- "REST JSON<br/>POST /api/v1/nlp/structure-order" --> py
+    be -- "REST JSON<br/>POST /api/v1/nlp/structure-order<br/>X-Service-Token" --> py
     be -- "SQL (Prisma)" --> db
     py -- "HTTPS" --> ext
 ```
@@ -64,12 +64,12 @@ sequenceDiagram
     participant DB as PostgreSQL
     actor P as Profesional
 
-    C->>FE: "Torta vegana para 20 personas temática Batman"
+    C->>FE: "Necesito 2 repisas de madera para el 2026-12-20 a domicilio"
     FE->>BE: POST /api/v1/orders/nlp-structure {rawText, domain}
     BE->>BE: ValidationPipe (DTO) + X-Correlation-Id
     BE->>PY: POST /api/v1/nlp/structure-order (retry=1, timeout=10s)
     PY->>PY: spaCy + reglas → entidades + confianza
-    PY->>OV: GET /v1/images?q=batman cake (User-Agent + TTL cache)
+    PY->>OV: GET /v1/images?q=wood furniture design (User-Agent + TTL cache)
     OV-->>PY: lote crudo de imágenes CC
     PY->>PY: Validación HTTPS + limpieza HTML/Unicode + deduplicación
     PY-->>BE: {entities, web_references, extraction_meta}
@@ -78,10 +78,10 @@ sequenceDiagram
     FE->>BE: POST /api/v1/orders (JWT)
     BE->>DB: INSERT order (CONFIRMED_BY_CLIENT) + web_references (deduplicadas)
     P->>FE: abre panel "Por cotizar"
-    FE->>BE: GET /api/v1/orders?status=CONFIRMED_BY_CLIENT (JWT BAKER)
+    FE->>BE: GET /api/v1/orders (JWT BAKER), búsqueda y filtros locales
     P->>FE: calculadora de costos → precio final
     FE->>BE: POST /api/v1/quotes
-    BE->>DB: TX: INSERT quote + UPDATE order QUOTED
+    BE->>DB: TX: transición condicional a QUOTED + INSERT quote
     C->>FE: acepta la cotización
     FE->>BE: PATCH /api/v1/orders/:id/status {ACCEPTED_BY_CLIENT}
     BE->>DB: UPDATE order (solo dueño, solo si QUOTED)
@@ -109,9 +109,9 @@ erDiagram
     orders {
         uuid id PK
         uuid client_id FK
-        text domain "cake | tattoo"
+        text domain "general | cake | tattoo"
         text raw_text
-        enum status "CONFIRMED_BY_CLIENT → QUOTED → ACCEPTED/REJECTED"
+        enum status "CONFIRMED_BY_CLIENT → QUOTED → ACCEPTED/REJECTED; CANCELLED"
         jsonb attributes "atributos del rubro"
         text image_url
         float confidence_score
@@ -143,11 +143,15 @@ Migraciones versionadas:
 - `backend-nestjs/prisma/migrations/20260928000000_init/migration.sql` (EP1).
 - `backend-nestjs/prisma/migrations/20261018000000_ep2_web_references_metadata/migration.sql` (EP2: metadatos de procedencia, restricción única compuesta e índices de consulta).
 
+- `backend-nestjs/prisma/migrations/20261021000000_cancel_orders/migration.sql` (cancelación conservando historial).
+
 ### Ciclo de vida del pedido
 
 ```mermaid
 stateDiagram-v2
     [*] --> CONFIRMED_BY_CLIENT: cliente confirma formulario
+    CONFIRMED_BY_CLIENT --> CANCELLED_BY_CLIENT: cliente cancela antes de cotizar
+    CANCELLED_BY_CLIENT --> [*]
     CONFIRMED_BY_CLIENT --> QUOTED: profesional envía cotización
     QUOTED --> ACCEPTED_BY_CLIENT: cliente acepta
     QUOTED --> REJECTED_BY_CLIENT: cliente rechaza
@@ -155,32 +159,35 @@ stateDiagram-v2
     REJECTED_BY_CLIENT --> [*]
 ```
 
-## 5. Diagrama de despliegue preliminar (staging en Google Cloud)
+## 5. Despliegue vigente: Render Free y Neon
 
 ```mermaid
 flowchart TB
-    gh["GitHub Actions<br/>CI/CD"] -- "docker push" --> ar[("Artifact Registry")]
-    usuario(["Usuarios web / PWA / Android"])
-
-    subgraph gcp["Google Cloud · proyecto staging · us-central1"]
-        subgraph run["Cloud Run"]
-            web["cotiza-staging-web<br/>nginx + Angular<br/>público"]
-            api["cotiza-staging-api<br/>NestJS<br/>público"]
-            nlp["cotiza-staging-nlp<br/>FastAPI<br/>ingress interno, invocable solo por api"]
-        end
-        sql[("Cloud SQL<br/>PostgreSQL 16<br/>db-f1-micro")]
-        sm["Secret Manager<br/>JWT_SECRET · DATABASE_URL"]
+    gh["GitHub Actions<br/>pruebas, escáneres e integración"]
+    usuario(["Web / PWA / Android"])
+    subgraph render["Render Free · Virginia · My Workspace"]
+        web["cotiza-ep2-web<br/>Angular + nginx"]
+        api["cotiza-ep2-api<br/>NestJS"]
+        nlp["cotiza-ep2-nlp<br/>FastAPI + spaCy"]
     end
-
-    usuario --> web
-    usuario --> api
-    api --> nlp
-    api -- "Cloud SQL connector (/cloudsql)" --> sql
-    api -. "lee secretos (cuenta de servicio dedicada)" .-> sm
-    ar -. imágenes .-> run
+    db[("Neon Free · PostgreSQL 16")]
+    ov[("Openverse API")]
+    gh -- "API de despliegue: SHA aprobado" --> render
+    usuario -- "HTTPS" --> web
+    web -- "HTTPS REST + JWT" --> api
+    api -- "HTTPS + X-Service-Token" --> nlp
+    api -- "PostgreSQL TLS" --> db
+    nlp -- "HTTPS, consulta de catálogo" --> ov
 ```
 
-Definido en [`terraform/`](../terraform). Ver [staging.md](staging.md).
+Los tres servicios son públicos por las restricciones del plan gratuito; Python exige
+un secreto compartido salvo en `/health`. Los secretos residen en Render y en GitHub
+Actions, nunca en el frontend. Render reconstruye el commit aprobado; el pipeline
+comprueba el SHA publicado y el flujo real antes de dar el despliegue por válido.
+
+Configuración activa: [`terraform/render/`](../terraform/render). Google Cloud fue
+descartado; los recursos Terraform de la raíz y sus scripts se conservan como históricos.
+Cuotas, suspensión y caducidad de credenciales: [staging.md](staging.md).
 
 ## 6. Decisiones arquitectónicas (ADR)
 

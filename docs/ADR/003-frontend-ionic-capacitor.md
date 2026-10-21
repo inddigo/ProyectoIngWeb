@@ -18,7 +18,7 @@ código común, con navegación e interacción adecuadas a cada dispositivo.
   conectividad (requisito de uso en terreno con conexión inestable).
 - **Service Worker** de Angular para la PWA.
 - La URL de la API se define por ambiente (`environment*.ts`): en web/PWA es el mismo origen
-  (nginx hace proxy), en Android apunta al host del emulador o a staging.
+  (nginx hace proxy), en Android apunta al staging HTTPS. La configuración publicada bloquea tráfico sin cifrar y contenido mixto.
 
 ## Consecuencias
 - (+) Un solo código para las tres plataformas.

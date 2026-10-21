@@ -48,7 +48,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-pastry_db}
       PYTHON_SERVICE_URL: http://python-service:8000
       JWT_SECRET: ${JWT_SECRET:-local-dev-jwt-secret-change-me-0123456789}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200,http://localhost:8100,http://localhost,capacitor://localhost}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200,http://localhost:8100,http://localhost,https://localhost,capacitor://localhost}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
     ports:
       - "3000:3000"

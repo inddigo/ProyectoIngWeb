@@ -631,6 +631,11 @@ class AdvancedNLPEngine:
         terms: list[str] = []
         lower = text.lower()
 
+        if domain == "general":
+            # El texto del encargo y los campos editables no se envían a terceros.
+            public_terms = {"Carpintería": "wood furniture", "Eventos": "event decoration", "Diseño": "graphic"}
+            return public_terms.get(str(entities.get("service_type", "")), "custom craft")
+
         if domain == "tattoo":
             motif = self._find_tattoo_motif(lower)
             if motif:
@@ -683,7 +688,34 @@ class AdvancedNLPEngine:
         return " ".join(terms[:2]) or "chocolate"
 
     # ---------- Punto de entrada ----------
+    def _general(self, text: str) -> tuple[dict[str, Any], float]:
+        lower = text.lower()
+        categories = [
+            (("mueble", "mesa", "estante", "carpinter", "repisa"), "Carpintería"),
+            (("evento", "decoración", "decoracion", "ceremonia"), "Eventos"),
+            (("logo", "diseño gráfico", "diseño grafico", "ilustración", "ilustracion", "sitio web"), "Diseño"),
+        ]
+        service = next((label for words, label in categories if any(w in lower for w in words)), "")
+        quantity = re.search(
+            r"\b(\d{1,4})\s*(?:unidades?|muebles?|mesas?|estantes?|repisas?|piezas?|logos?|diseños?)\b", lower
+        )
+        date = re.search(r"\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4})\b", lower)
+        materials = next(
+            (m for m in ("madera", "metal", "tela", "papel", "acrílico", "acrilico") if re.search(rf"\b{m}\b", lower)),
+            "",
+        )
+        delivery = next((d for d in ("a domicilio", "retiro", "remoto", "presencial", "digital") if d in lower), "")
+        return {
+            "service_type": service,
+            "quantity": max(1, int(quantity.group(1))) if quantity else 1,
+            "materials": materials,
+            "deadline": date.group(0) if date else "",
+            "delivery": delivery,
+        }, _confidence([bool(service), bool(quantity), bool(date), bool(delivery)])
+
     def extract(self, domain: str, text: str) -> tuple[dict[str, Any], float]:
+        if domain == "general":
+            return self._general(text)
         if domain == "tattoo":
             return self._tattoo(text)
         return self.extract_cake_entities(text)

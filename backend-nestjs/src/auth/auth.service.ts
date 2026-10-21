@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -38,6 +42,9 @@ export class AuthService {
   }
 
   async register(data: RegisterDto) {
+    if (data.role && data.role !== 'CLIENT') {
+      throw new BadRequestException('El registro público solo admite clientes');
+    }
     const email = data.email.toLowerCase();
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
@@ -48,7 +55,7 @@ export class AuthService {
     const user = await this.usersService.create({
       email,
       name: data.name,
-      role: data.role ?? 'CLIENT',
+      role: 'CLIENT',
       password: hashedPassword,
     });
 

@@ -1,4 +1,4 @@
-export type Domain = 'cake' | 'tattoo';
+export type Domain = 'general' | 'cake' | 'tattoo';
 
 export type OrderStatus =
   | 'DRAFT'
@@ -6,7 +6,8 @@ export type OrderStatus =
   | 'CONFIRMED_BY_CLIENT'
   | 'QUOTED'
   | 'ACCEPTED_BY_CLIENT'
-  | 'REJECTED_BY_CLIENT';
+  | 'REJECTED_BY_CLIENT'
+  | 'CANCELLED_BY_CLIENT';
 
 export type AttributeValue = string | number | string[];
 export type Attributes = Record<string, AttributeValue>;
@@ -97,6 +98,7 @@ export interface QuoteEstimate {
 }
 
 export const DOMAIN_LABELS: Record<Domain, string> = {
+  general: 'Encargos generales',
   cake: 'Pastelería',
   tattoo: 'Tatuajes',
 };
@@ -108,6 +110,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   QUOTED: 'Cotización recibida',
   ACCEPTED_BY_CLIENT: 'Aceptado',
   REJECTED_BY_CLIENT: 'Rechazado',
+  CANCELLED_BY_CLIENT: 'Cancelado',
 };
 
 export const STATUS_COLORS: Record<OrderStatus, string> = {
@@ -117,4 +120,5 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
   QUOTED: 'primary',
   ACCEPTED_BY_CLIENT: 'success',
   REJECTED_BY_CLIENT: 'danger',
+  CANCELLED_BY_CLIENT: 'medium',
 };

@@ -1,6 +1,5 @@
-// Build para Capacitor/Android. 10.0.2.2 es el host visto desde el emulador de
-// Android; para un dispositivo físico usar la IP LAN o la URL de staging.
+// Android utiliza el mismo staging HTTPS que la versión web.
 export const environment = {
   production: true,
-  apiUrl: 'http://10.0.2.2:3000',
+  apiUrl: 'https://cotiza-ep2-web.onrender.com',
 };

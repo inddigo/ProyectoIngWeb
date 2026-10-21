@@ -16,6 +16,16 @@ describe('RegisterDto', () => {
     expect(await errorsFor({ ...valid, role: 'ADMIN' })).toContain('role');
   });
 
+  it('no permite auto-asignarse acceso al panel profesional', async () => {
+    expect(await errorsFor({ ...valid, role: 'BAKER' })).toContain('role');
+  });
+
+  it('rechaza contraseñas Unicode que bcrypt truncaría', async () => {
+    expect(await errorsFor({ ...valid, password: 'ñ'.repeat(40) })).toContain(
+      'password',
+    );
+  });
+
   it('exige email válido y contraseña de 8+ caracteres', async () => {
     const errors = await errorsFor({ ...valid, email: 'x', password: '123' });
     expect(errors).toEqual(expect.arrayContaining(['email', 'password']));

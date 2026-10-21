@@ -102,12 +102,7 @@ type Mode = 'login' | 'register';
             <form [formGroup]="form" (ngSubmit)="submit()">
               <ion-list lines="none">
                 @if (mode() === 'register') {
-                  <ion-item>
-                    <ion-segment formControlName="role" aria-label="Tipo de cuenta">
-                      <ion-segment-button value="CLIENT"><ion-label>Soy cliente</ion-label></ion-segment-button>
-                      <ion-segment-button value="BAKER"><ion-label>Soy profesional</ion-label></ion-segment-button>
-                    </ion-segment>
-                  </ion-item>
+                  <p class="muted">Crea tu cuenta de cliente para seguir tus pedidos. Si eres profesional, ingresa con la cuenta habilitada para tu negocio.</p>
                   <ion-item>
                     <ion-input
                       formControlName="name"
@@ -173,7 +168,6 @@ export class LoginComponent {
   readonly error = signal<string | null>(null);
 
   readonly form = this.fb.group({
-    role: this.fb.control<'CLIENT' | 'BAKER'>('CLIENT'),
     name: [''],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]],
@@ -199,11 +193,11 @@ export class LoginComponent {
       this.form.markAllAsTouched();
       return;
     }
-    const { email, password, name, role } = this.form.getRawValue();
+    const { email, password, name } = this.form.getRawValue();
     const request$: Observable<AuthResponse> =
       this.mode() === 'login'
         ? this.auth.login(email, password)
-        : this.auth.register({ email, password, name, role });
+        : this.auth.register({ email, password, name, role: 'CLIENT' });
 
     this.loading.set(true);
     this.error.set(null);

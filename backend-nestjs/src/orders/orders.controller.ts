@@ -95,4 +95,14 @@ export class OrdersController {
   ) {
     return this.ordersService.decide(id, user.userId, dto.status);
   }
+
+  @Patch(':id/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CLIENT')
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.ordersService.cancel(id, user.userId);
+  }
 }

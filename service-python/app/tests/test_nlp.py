@@ -1,6 +1,33 @@
 from app.nlp.engine import nlp_engine
 
 
+def test_general_order_has_own_fields_and_no_bakery_defaults():
+    text = "Necesito 2 repisas de madera para el 2026-12-20, con entrega a domicilio"
+    entities, confidence = nlp_engine.extract("general", text)
+    assert entities == {
+        "service_type": "Carpintería",
+        "quantity": 2,
+        "materials": "madera",
+        "deadline": "2026-12-20",
+        "delivery": "a domicilio",
+    }
+    assert confidence == 0.95
+    assert nlp_engine.build_search_query("general", text, entities) == "wood furniture"
+
+
+def test_general_unknown_service_remains_editable_and_private():
+    text = "Necesito un trabajo para Ana, correo ana@example.org y teléfono 987654321"
+    entities, confidence = nlp_engine.extract("general", text)
+    assert entities["service_type"] == ""
+    assert entities["deadline"] == ""
+    assert confidence == 0.3
+    assert nlp_engine.build_search_query("general", text, entities) == "custom craft"
+
+
+def test_general_references_do_not_transmit_user_edited_fields():
+    assert nlp_engine.build_search_query("general", "", {"service_type": "Ana ana@example.org"}) == "custom craft"
+
+
 def test_extract_servings():
     assert nlp_engine.extract_servings("Quiero una torta para 20 personas") == 20
 

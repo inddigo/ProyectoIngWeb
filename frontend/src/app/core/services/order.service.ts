@@ -53,6 +53,10 @@ export class OrderService {
     );
   }
 
+  cancelOrder(orderId: string): Observable<Order> {
+    return this.http.patch<Order>(`${this.api}/orders/${orderId}/cancel`, {});
+  }
+
   submitQuote(payload: CreateQuotePayload): Observable<Quote> {
     return this.http.post<Quote>(`${this.api}/quotes`, payload);
   }

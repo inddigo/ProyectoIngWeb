@@ -2,12 +2,15 @@
 
 # Cotiza — Plataforma de cotización inteligente para servicios personalizados
 
-Plataforma SaaS multirubro que transforma pedidos escritos en lenguaje natural
+Plataforma para profesionales que trabajan por encargo: talleres, estudios, pastelerías,
+organizadores de eventos y freelancers. Convierte solicitudes ambiguas en detalles
+claros, referencias y cotizaciones según costos reales. En esta versión los rubros
+disponibles son encargos generales (con campos editables), pastelería y tatuajes. Transforma pedidos escritos en lenguaje natural
 (*"quiero una torta vegana para 20 personas con temática de Batman"*, *"un tatuaje de 15 cm
 en el antebrazo a color"*) en formularios estructurados mediante NLP (`spaCy` + reglas), obtiene,
 limpia, normaliza y deduplica referencias visuales desde la Web (Openverse API), las indexa en
 PostgreSQL con metadatos de procedencia y permite al profesional cotizar con una calculadora de
-costos asistida por reglas. El cliente sigue su pedido y acepta o rechaza la cotización.
+costos asistida por reglas. El cliente sigue su pedido y acepta o rechaza la cotización. Ambos paneles incluyen búsqueda por texto o número, filtros de rubro/estado, resumen de pedidos y actualización manual. El cliente puede cancelar antes de recibir una cotización.
 
 - **Definición del proyecto y especificación EP2** (problema, fuente web, limpieza, métricas, diseño adaptativo): [docs/proyecto.md](docs/proyecto.md)
 - **Arquitectura** (contexto C4, contenedores, despliegue, modelo de datos e índices, flujo, ADR 001–006): [docs/arquitectura.md](docs/arquitectura.md)
@@ -82,7 +85,7 @@ Todas las respuestas incluyen la cabecera `X-Correlation-Id` para trazabilidad d
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
 | `GET` | `/health` | Público | Estado de NestJS, PostgreSQL y servicio Python + latencias (`dbLatencyMs`, `nlpLatencyMs`, `correlationId`) |
-| `POST` | `/auth/register` | Público | Registro de usuario (`CLIENT` o `BAKER`) |
+| `POST` | `/auth/register` | Público | Registro de cliente (`CLIENT`); las cuentas profesionales se aprovisionan de forma controlada |
 | `POST` | `/auth/login` | Público | Autenticación; devuelve `access_token` JWT |
 | `POST` | `/api/v1/orders/nlp-structure` | Público | Texto libre → atributos + referencias web limpias + `extraction_meta` (NestJS → FastAPI con retry y fallback) |
 | `GET` | `/api/v1/orders/nlp-metrics` | Público | Métricas de calidad de recuperación web y evaluación del benchmark NLP |
@@ -90,6 +93,7 @@ Todas las respuestas incluyen la cabecera `X-Correlation-Id` para trazabilidad d
 | `GET` | `/api/v1/orders/mine` | `CLIENT` | Lista los pedidos del cliente autenticado (incluye `webReferences` y `quote`) |
 | `GET` | `/api/v1/orders/web-references` | Autenticado | Busca referencias web indexadas en PostgreSQL (`?q=`, `?domain=`, `?source=`) |
 | `PATCH` | `/api/v1/orders/:id/status` | `CLIENT` (dueño) | Acepta (`ACCEPTED_BY_CLIENT`) o rechaza (`REJECTED_BY_CLIENT`) una cotización |
+| `PATCH` | `/api/v1/orders/:id/cancel` | `CLIENT` (dueño) | Cancela solo pedidos aún pendientes de cotización, conservando historial |
 | `GET` | `/api/v1/orders?status=` | `BAKER` / `ADMIN` | Lista pedidos filtrados por estado |
 | `GET` | `/api/v1/quotes/calculate/:orderId` | `BAKER` | Estimación referencial de precio por reglas según atributos del rubro |
 | `POST` | `/api/v1/quotes` | `BAKER` | Crea cotización y actualiza el pedido a `QUOTED` en una transacción ACID |
@@ -205,6 +209,6 @@ Archivo: [`.github/workflows/devsecops-ci-cd.yml`](.github/workflows/devsecops-c
 
 ### 10.2. Limitaciones actuales identificadas y trabajo futuro (hacia Entrega Final)
 1. **Caché de referencias en memoria local:** El caché con TTL de `service-python` reside en la memoria del proceso; si se escalan múltiples instancias en el proveedor, cada réplica mantiene su propio caché.
-2. **Cobertura de rubros:** Actualmente los extractores NLP y las reglas de estimación están especializados en `cake` (pastelería) y `tattoo` (tatuajes).
+2. **Cobertura de rubros:** Se admiten `general` (tipo de trabajo, cantidad, materiales, plazo y entrega), `cake` (pastelería) y `tattoo` (tatuajes). Los encargos generales usan extracción básica y corrección manual; se cotizan con los costos ingresados por el profesional, sin reglas específicas de otros rubros.
 3. **Trabajo para el Módulo 3 (Entrega Final):** Completar la calibración automática de precios e insumos utilizando el histórico acumulado de cotizaciones aceptadas/rechazadas por profesional y ejecutar la evaluación comparativa frente a la línea base no adaptativa.
 

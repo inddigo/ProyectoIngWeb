@@ -64,6 +64,7 @@ import {
 } from '../../shared/attributes';
 
 const PLACEHOLDERS: Record<Domain, string> = {
+  general: 'Ej: Necesito 2 repisas de madera para el 2026-12-20, con entrega a domicilio',
   cake: 'Ej: Quiero una torta vegana de chocolate para 20 personas con temática de Batman',
   tattoo: 'Ej: Quiero un tatuaje de 15 cm en el antebrazo a color',
 };
@@ -107,7 +108,7 @@ const PLACEHOLDERS: Record<Domain, string> = {
         <ion-title><a class="brand-link" routerLink="/" aria-label="Cotiza, inicio"><span class="brand-word">cotiza<span class="brand-dot" aria-hidden="true">.</span></span><span class="brand-caption">Ideas únicas. Pedidos a tu medida.</span></a></ion-title>
         <ion-buttons slot="end">
           @if (auth.currentUser(); as user) {
-            <ion-button [routerLink]="auth.homeFor(user)">
+            <ion-button [routerLink]="auth.homeFor(user)" [attr.aria-label]="user.role === 'BAKER' ? 'Panel del profesional' : 'Mis pedidos'">
               <ion-icon slot="start" name="list-outline"></ion-icon>
               <span class="ion-hide-sm-down">{{ user.role === 'BAKER' ? 'Panel' : 'Mis pedidos' }}</span>
             </ion-button>
@@ -135,9 +136,10 @@ const PLACEHOLDERS: Record<Domain, string> = {
           <ion-row>
             @if (!structured()) {
               <ion-col size="12" sizeLg="5" class="intro-column">
-                <span class="eyebrow">Hecho a tu manera</span>
-                <h1>Tu idea,<br />en <em>buenas manos.</em></h1>
-                <p class="intro-copy">Una torta para celebrar. Un tatuaje con historia. Cuéntanos qué imaginas y demos forma a los detalles.</p>
+                <span class="eyebrow">Pedidos personalizados, sin enredos</span>
+                <h1>Tu idea,<br />lista para <em>cotizar.</em></h1>
+                <p class="intro-copy">Cada trabajo a medida empieza con una conversación. Cotiza ordena lo que necesitas, reúne referencias y ayuda al profesional a calcular un precio según sus costos.</p>
+                <p class="studio-context">Para quienes crean, diseñan y trabajan por encargo: desde un taller o un estudio hasta un proyecto independiente.</p>
                 <img class="idea-illustration" src="/idea-studio.svg" alt="" width="300" height="190" />
                 <div class="intro-detail">Tú tienes la última palabra en cada detalle.</div>
               </ion-col>
@@ -147,11 +149,12 @@ const PLACEHOLDERS: Record<Domain, string> = {
               <ion-card class="request-card">
                 <ion-card-header>
                   <div class="step-label">01 / TU IDEA</div><ion-card-title>Cuéntanos qué tienes en mente</ion-card-title>
-                  <ion-card-subtitle>Organizamos los detalles para que puedas revisarlos antes de enviar.</ion-card-subtitle>
+                  <ion-card-subtitle>Describe tu encargo con tus palabras. Revisa los detalles antes de enviarlos al profesional.</ion-card-subtitle>
                 </ion-card-header>
                 <ion-card-content>
                   <form [formGroup]="requestForm" (ngSubmit)="structure()">
-                    <ion-segment formControlName="domain" aria-label="Tipo de servicio">
+                    <p class="available-domains">Rubros disponibles en esta versión</p>
+                    <ion-segment formControlName="domain" aria-label="Rubro de tu pedido">
                       @for (d of domains; track d) {
                         <ion-segment-button [value]="d">
                           <ion-label>{{ domainLabels[d] }}</ion-label>
@@ -184,7 +187,7 @@ const PLACEHOLDERS: Record<Domain, string> = {
                           labelPlacement="stacked"
                           fill="outline"
                           placeholder="https://..."
-                          errorText="Debe ser una URL que empiece con http:// o https://"
+                          errorText="Debe ser una URL HTTPS válida"
                         ></ion-input>
                       </div>
                     </div>
@@ -308,13 +311,13 @@ export class CustomerPortalComponent implements OnInit {
   private readonly notify = inject(NotificationService);
   private readonly router = inject(Router);
 
-  readonly domains: Domain[] = ['cake', 'tattoo'];
+  readonly domains: Domain[] = ['general', 'cake', 'tattoo'];
   readonly domainLabels = DOMAIN_LABELS;
 
   readonly requestForm = this.fb.group({
-    domain: this.fb.control<Domain>('cake'),
+    domain: this.fb.control<Domain>('general'),
     rawText: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(2000)]],
-    referenceImage: ['', Validators.pattern(/^https?:\/\/\S+$/)],
+    referenceImage: ['', Validators.pattern(/^https:\/\/\S+$/)],
   });
   attributesForm = new FormGroup<Record<string, FormControl<string>>>({});
 
@@ -322,7 +325,7 @@ export class CustomerPortalComponent implements OnInit {
   readonly sending = signal(false);
   readonly structured = signal<StructuredOrder | null>(null);
   readonly attributeKeys = signal<string[]>([]);
-  private readonly selectedDomain = signal<Domain>('cake');
+  private readonly selectedDomain = signal<Domain>('general');
 
   readonly placeholder = computed(() => PLACEHOLDERS[this.selectedDomain()]);
   readonly confidence = computed(
@@ -372,6 +375,11 @@ export class CustomerPortalComponent implements OnInit {
   confirm(): void {
     const data = this.structured();
     if (!data) return;
+    if (this.attributesForm.invalid) {
+      this.attributesForm.markAllAsTouched();
+      this.notify.show('Revisa los campos: cantidades entre 1 y 10000 y textos de hasta 200 caracteres.', 'warning');
+      return;
+    }
 
     if (!this.auth.hasRole('CLIENT')) {
       if (this.auth.hasRole('BAKER')) {
@@ -441,6 +449,7 @@ export class CustomerPortalComponent implements OnInit {
     for (const [key, value] of entries) {
       controls[key] = new FormControl(formatAttribute(value).replace(/^—$/, ''), {
         nonNullable: true,
+        validators: typeof value === 'number' ? [Validators.required, Validators.min(1), Validators.max(10000), Validators.pattern(/^\d+$/)] : key === 'service_type' ? [Validators.required, Validators.minLength(2), Validators.maxLength(200)] : [Validators.maxLength(200)],
       });
     }
     this.attributesForm = new FormGroup(controls);

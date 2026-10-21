@@ -15,6 +15,12 @@ def test_health_check():
     assert body["external_source"]["provider"] == "openverse"
 
 
+def test_replaces_unbounded_correlation_id():
+    response = client.get("/health", headers={"X-Correlation-Id": "x" * 2000})
+    assert response.status_code == 200
+    assert len(response.headers["X-Correlation-Id"]) == 36
+
+
 def test_structure_cake_order():
     payload = {"raw_text": "torta para 15 personas de chocolate vegana temática marvel", "domain": "cake"}
     response = client.post("/api/v1/nlp/structure-order", json=payload)
@@ -48,6 +54,19 @@ def test_structure_tattoo_order():
     assert entities["size"] == "15 cm"
     assert entities["body_part"] == "Antebrazo"
     assert entities["style"] == "A color"
+
+
+def test_structure_general_order():
+    response = client.post(
+        "/api/v1/nlp/structure-order",
+        json={"raw_text": "Necesito 2 repisas de madera para el 2026-12-20 a domicilio", "domain": "general"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["entities"]["quantity"] == 2
+    assert body["entities"]["service_type"] == "Carpintería"
+    assert "servings" not in body["entities"]
+    assert body["extraction_meta"]["query_used"] == "wood furniture design"
 
 
 def test_rejects_unknown_domain():

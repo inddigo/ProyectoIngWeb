@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, retry } from 'rxjs';
-import { Domain, SUPPORTED_DOMAINS } from '../common/constants/domains';
+import {
+  Domain,
+  SUPPORTED_DOMAINS,
+  manualAttributes,
+} from '../common/constants/domains';
 import { getCurrentCorrelationId } from '../common/interceptors/correlation-logging.interceptor';
 
 export interface WebReferenceResult {
@@ -98,7 +102,7 @@ export class NlpService {
       return {
         raw_text: rawText,
         domain,
-        entities: { confidence_score: 0 },
+        entities: { ...manualAttributes(domain), confidence_score: 0 },
         web_references: [],
         fallback: true,
       };

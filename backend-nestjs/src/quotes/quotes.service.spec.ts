@@ -1,7 +1,12 @@
-import { ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { estimatePrice, QuotesService } from './quotes.service';
 
 describe('estimatePrice', () => {
+  it('no impone reglas de pastelería a un encargo general', () => {
+    expect(() => estimatePrice('general', { quantity: 2 })).toThrow(
+      BadRequestException,
+    );
+  });
   it('pastel: porciones x precio base x multiplicador de temática + restricciones', () => {
     const res = estimatePrice('cake', {
       servings: 20,
@@ -26,7 +31,7 @@ describe('estimatePrice', () => {
 });
 
 describe('QuotesService.createQuote', () => {
-  const tx = { quote: { create: jest.fn() }, order: { update: jest.fn() } };
+  const tx = { quote: { create: jest.fn() }, order: { updateMany: jest.fn() } };
   const prisma = {
     order: { findUnique: jest.fn() },
     $transaction: jest.fn((fn) => fn(tx)),
@@ -38,7 +43,10 @@ describe('QuotesService.createQuote', () => {
     details: 'ok',
   };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    tx.order.updateMany.mockResolvedValue({ count: 1 });
+  });
 
   it('crea la cotización y marca el pedido como QUOTED', async () => {
     prisma.order.findUnique.mockResolvedValue({
@@ -46,7 +54,7 @@ describe('QuotesService.createQuote', () => {
     });
     tx.quote.create.mockResolvedValue({ id: 'q1' });
     await expect(service.createQuote(dto)).resolves.toEqual({ id: 'q1' });
-    expect(tx.order.update).toHaveBeenCalledWith(
+    expect(tx.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'QUOTED' } }),
     );
   });
@@ -56,5 +64,16 @@ describe('QuotesService.createQuote', () => {
     await expect(service.createQuote(dto)).rejects.toBeInstanceOf(
       ConflictException,
     );
+  });
+
+  it('no crea cotizaciones si el cliente canceló durante el cálculo', async () => {
+    prisma.order.findUnique.mockResolvedValue({
+      status: 'CONFIRMED_BY_CLIENT',
+    });
+    tx.order.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.createQuote(dto)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(tx.quote.create).not.toHaveBeenCalled();
   });
 });

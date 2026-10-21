@@ -22,9 +22,16 @@ async function main() {
     console.log('SEED_DEMO_DATA=false: se omite el seed de demo');
     return;
   }
+  if (process.env.RENDER === 'true') {
+    for (const key of ['SEED_BAKER_PASSWORD', 'SEED_CLIENT_PASSWORD']) {
+      if (!process.env[key] || Buffer.byteLength(process.env[key], 'utf8') < 12) {
+        throw new Error(`${key} debe configurarse con una contraseña de al menos 12 bytes`);
+      }
+    }
+  }
   await upsertUser(
     'pastelero@pasteleria.com',
-    'Pastelero Principal',
+    'Profesional Demo',
     'BAKER',
     process.env.SEED_BAKER_PASSWORD || 'pastelero123',
   );

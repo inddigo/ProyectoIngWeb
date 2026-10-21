@@ -41,7 +41,7 @@ MAX_CACHE_ENTRIES = int(os.getenv("SCRAPER_MAX_CACHE_ENTRIES", "128"))
 MAX_RESULTS = 4
 RAW_PAGE_SIZE = 12
 
-DOMAIN_KEYWORDS = {"cake": "cake", "tattoo": "tattoo"}
+DOMAIN_KEYWORDS = {"cake": "cake", "tattoo": "tattoo", "general": "design"}
 
 TRACKING_QUERY_PARAMS = {
     "utm_source",

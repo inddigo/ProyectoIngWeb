@@ -41,7 +41,8 @@ export class CorrelationLoggingInterceptor implements NestInterceptor {
     const incomingId =
       req.headers['x-correlation-id'] ?? req.headers['x-request-id'];
     const correlationId =
-      typeof incomingId === 'string' && incomingId.trim().length > 0
+      typeof incomingId === 'string' &&
+      /^[A-Za-z0-9._:-]{1,100}$/.test(incomingId)
         ? incomingId.trim()
         : randomUUID();
 
@@ -88,7 +89,7 @@ export class CorrelationLoggingInterceptor implements NestInterceptor {
       event: 'http_request',
       correlationId,
       method: req.method,
-      path: req.originalUrl || req.url,
+      path: req.path,
       statusCode,
       durationMs,
       ...(error ? { error } : {}),

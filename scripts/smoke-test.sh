@@ -21,6 +21,12 @@ echo "$HEALTH" | json "d['services']"
 check "correlationId propagado en /health" "$(echo "$HEALTH" | json "d.get('correlationId')")" "smoke-health-001"
 check "PostgreSQL disponible" "$(echo "$HEALTH" | json "d['services']['database']")" "up"
 check "Python disponible" "$(echo "$HEALTH" | json "d['services']['pythonService']")" "up"
+# Probar directamente nginx en CI: Cloud Run rechaza hosts ajenos antes de llegar a nginx.
+if [ "${VERIFY_PROXY_HOST:-0}" = "1" ]; then
+  HOST_CHECK=$(curl -sf -H 'Host: attacker.invalid' -H 'X-Correlation-Id: smoke-proxy-host-001' "$BASE/health")
+  check "Host del cliente no cambia el destino del proxy" "$(echo "$HOST_CHECK" | json "d.get('correlationId')")" "smoke-proxy-host-001"
+  check "proxy conserva el backend configurado" "$(echo "$HOST_CHECK" | json "d['services']['database']")" "up"
+fi
 if [ -n "${EXPECTED_REVISION:-}" ]; then
   check "revisión desplegada" "$(echo "$HEALTH" | json "d.get('revision')")" "$EXPECTED_REVISION"
 fi

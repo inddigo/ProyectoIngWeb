@@ -21,4 +21,8 @@ En la Entrega Parcial 1 (EP1), la obtención de referencias visuales desde la AP
 
 ## Revisión del 20 de octubre de 2026
 
+### Proxy público y excepción de análisis estático
+
+`frontend/nginx.conf` es una plantilla: el entrypoint oficial de nginx sustituye `BACKEND_ORIGIN` antes de iniciar. El destino efectivo es una URL de configuración, nunca `$host`, un parámetro ni una cabecera de la petición. La regla `generic.nginx.security.missing-internal.missing-internal` interpreta el marcador de plantilla como una variable nginx y produce un falso positivo. Se excluye únicamente ese hallazgo en esa línea, conservando el resto del análisis y sus bloqueos. Marcar la ubicación como `internal` impediría el acceso público requerido a `/api`, `/auth` y `/health`. En CI, con acceso directo a nginx (`VERIFY_PROXY_HOST=1`), la prueba de humo verifica también una petición con un `Host` ajeno y comprueba que sigue atendiendo el backend configurado.
+
 Se inspecciona el lote completo antes de seleccionar cuatro imágenes. Se distinguen válidos totales y retornados; sin datos la tasa es nula. La consulta externa utiliza vocabulario cerrado para evitar filtrar temas libres. No se infieren licencias ni autores ausentes y no se usan imágenes estáticas como sustituto de recuperación real. Los fallos actualizan el estado externo a degraded. CI usa una fuente sintética identificada; staging exige fuente real, SHA desplegado y evidencia de persistencia.

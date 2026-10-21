@@ -26,6 +26,15 @@ class DeploymentSafetyTests(unittest.TestCase):
         context.start()
         self.addCleanup(context.stop)
 
+    def test_refuses_files_and_foreign_hosts_before_opening_a_connection(self):
+        with patch.object(deploy.http.client, "HTTPSConnection") as connection:
+            for url in ("file:///etc/passwd", "https://attacker.invalid/", "https://api.render.com.attacker.invalid/"):
+                with self.assertRaises(RuntimeError):
+                    deploy.request_json(url)
+            with self.assertRaises(RuntimeError):
+                deploy.request_json("https://test.onrender.com/", token="unit-test-key")
+            connection.assert_not_called()
+
     def test_refuses_paid_service_before_triggering_deploy(self):
         with patch.object(deploy, "request_json", return_value={"serviceDetails": {"plan": "starter"}}) as request:
             with self.assertRaisesRegex(RuntimeError, "Free"):

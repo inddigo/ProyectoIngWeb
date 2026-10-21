@@ -138,8 +138,8 @@ jobs:
       RENDER_API_KEY: offline-plan
       RENDER_OWNER_ID: usr-offlineplan
       TF_VAR_database_url: postgresql://offline:offline@example.invalid/db?sslmode=require
-      TF_VAR_jwt_secret: ci-placeholder-with-at-least-32-characters
-      TF_VAR_python_service_token: ci-placeholder-with-at-least-32-characters
+      TF_VAR_jwt_secret: '00000000000000000000000000000000'
+      TF_VAR_python_service_token: '00000000000000000000000000000000'
       TF_VAR_seed_baker_password: ci-placeholder-long-password
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

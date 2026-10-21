@@ -1,3 +1,7 @@
 # Falso positivo: token público del badge de CircleCI en el README generado por Nest CLI
 # (eliminado en 34c4177, persiste en el historial)
 99652c0a0629c98dcfa30f7bd3e4117cfe0269de:backend-nestjs/README.md:generic-api-key:5
+
+# Valores ficticios del plan Terraform offline; nunca fueron credenciales válidas.
+f5c735936c3ffa088e52b161c01bc10cdbdd45ac:.github/workflows/devsecops-ci-cd.yml:generic-api-key:141
+f5c735936c3ffa088e52b161c01bc10cdbdd45ac:.github/workflows/devsecops-ci-cd.yml:generic-api-key:142

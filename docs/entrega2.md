@@ -11,7 +11,7 @@ Validación realizada el 20 de octubre de 2026:
 - Backend: 32 pruebas Jest aprobadas; lint y compilación NestJS.
 - Python: 33 pruebas aprobadas; Ruff y formato. Incluye procesamiento del lote completo, duplicados después del cuarto resultado, caché/expiración, aislamiento de pruebas, privacidad, timeout y recuperación.
 - Frontend: 15 pruebas aprobadas; lint y compilación web/PWA.
-- Despliegue Render: tres pruebas de protección (rechazo de plan de pago, SHA distinto y registro de revisión correcta).
+- Despliegue Render: cuatro pruebas de protección (plan de pago, SHA distinto, destinos HTTP no autorizados y registro de revisión correcta).
 - Integración local tras adaptar Render: flujo completo aprobado con fuente sintética, secreto entre servicios y límite de 512 MiB. Memoria observada después del flujo: Python 319 MiB, backend 54 MiB y frontend 13 MiB. No demuestra rendimiento con la CPU de Render ni recuperación externa real.
 - Terraform Render: configuración válida y plan sin refresco con tres servicios Free, cero modificaciones y cero destrucciones. No se aplicó ese plan. La configuración GCP anterior es histórica.
 - La integración Docker se ejecuta con `docker-compose.ci.yml`: es una fuente sintética y se identifica como tal. La evidencia definitiva se encuentra en la ejecución de GitHub Actions de la versión evaluable.

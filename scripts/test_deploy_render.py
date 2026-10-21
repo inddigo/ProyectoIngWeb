@@ -27,7 +27,7 @@ class DeploymentSafetyTests(unittest.TestCase):
         self.addCleanup(context.stop)
 
     def test_refuses_files_and_foreign_hosts_before_opening_a_connection(self):
-        with patch.object(deploy.http.client, "HTTPSConnection") as connection:
+        with patch.object(deploy.httpx, "Client") as connection:
             for url in ("file:///etc/passwd", "https://attacker.invalid/", "https://api.render.com.attacker.invalid/"):
                 with self.assertRaises(RuntimeError):
                     deploy.request_json(url)

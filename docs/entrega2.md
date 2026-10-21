@@ -10,7 +10,7 @@ Validación actualizada el 21 de octubre de 2026:
 
 - Backend: 54 pruebas Jest aprobadas; lint y compilación NestJS.
 - Python: 38 pruebas aprobadas; Ruff y formato. Incluye procesamiento del lote completo, duplicados después del cuarto resultado, caché/expiración, aislamiento de pruebas, privacidad, timeout y recuperación.
-- Frontend: 20 pruebas aprobadas; lint y compilación web/PWA.
+- Frontend: 22 pruebas aprobadas; lint y compilación web/PWA.
 - Despliegue Render: cuatro pruebas de protección (plan de pago, SHA distinto, destinos HTTP no autorizados y registro de revisión correcta).
 - Integración local tras adaptar Render: flujo completo aprobado con fuente sintética, secreto entre servicios y límite de 512 MiB. Memoria observada después del flujo: Python 319 MiB, backend 54 MiB y frontend 13 MiB. No demuestra rendimiento con la CPU de Render ni recuperación externa real.
 - Terraform Render: configuración válida y plan sin refresco con tres servicios Free, cero modificaciones y cero destrucciones. No se aplicó ese plan. La configuración GCP anterior es histórica.

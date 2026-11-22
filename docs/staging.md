@@ -2,7 +2,7 @@
 
 ## Estado
 
-Desplegado y verificado el 20 de octubre de 2026 con Openverse real: [web](https://cotiza-ep2-web.onrender.com), [API](https://cotiza-ep2-api.onrender.com/health) y [NLP](https://cotiza-ep2-nlp.onrender.com/health). El flujo de recuperación, persistencia, consulta, cotización y aceptación aprobó el smoke test. La evidencia inicial está en `docs/evidence/staging-2026-10-20/`. Google Cloud queda descartado: los archivos de la raíz `terraform/` y scripts `bootstrap-staging.sh` / `deploy-staging.sh` son históricos y no se ejecutan en el pipeline actual. La configuración activa es `terraform/render`.
+Desplegado el 22 de noviembre de 2026: [web](https://cotiza-ep2-web.onrender.com), [API](https://cotiza-ep2-api.onrender.com/health) y [NLP](https://cotiza-ep2-nlp.onrender.com/health). Render confirmó build y deploy exitosos, estado `live` en los tres servicios sobre el SHA `e6c7be18bb88e85acd93624bfec1144f7937d0da`. CI aprobó sus controles, pero omitió el job de staging por tratarse de una rama de PR; por ello aún falta correr el smoke test externo con Openverse real. La evidencia inicial verificada el 20 de octubre está en `docs/evidence/staging-2026-10-20/`. Google Cloud queda descartado: los archivos de la raíz `terraform/` y scripts `bootstrap-staging.sh` / `deploy-staging.sh` son históricos y no se ejecutan en el pipeline actual. La configuración activa es `terraform/render`.
 
 ## Arquitectura y límites
 
@@ -43,5 +43,5 @@ Fuentes: [límites Render Free](https://render.com/docs/free), [Neon Free](https
 - Espacio Render confirmado por el titular: `My Workspace`. Los tres servicios `cotiza-ep2-*` están en plan Free; no se modificaron los servicios anteriores.
 - Neon: proyecto `curly-frost-29571849` (`cotiza-ep2-staging`), rama de aplicación `br-sparkling-dream-b72kfl8v`, base `cotiza`, rol exclusivo `cotiza_app`. El plan de la cuenta se verificó como `free_v3`.
 - Terraform creó tres servicios y conserva el estado local privado en `terraform/render/terraform.tfstate`. Ese archivo contiene secretos: conservarlo y respaldarlo de forma privada, nunca subirlo a GitHub.
-- La credencial autorizada de Render utilizada por GitHub Actions vence el **27 de octubre de 2026 a las 21:42, hora de Chile continental**. Renovar el secreto `RENDER_API_KEY` antes de esa fecha para futuros despliegues; `RENDER_CREDENTIAL_EXPIRES_AT` registra su caducidad. Su vencimiento no borra ni detiene los servicios ya publicados. No es una credencial permanente.
+- La credencial Render guardada como secreto de GitHub Actions venció el **27 de octubre de 2026 a las 21:42, hora de Chile continental**. Renovar `RENDER_API_KEY` en Actions antes de ejecutar el flujo de publicación. Su vencimiento no borra ni detiene los servicios ya publicados. El acceso conectado de Render permitió hacer este despliegue manualmente, sin copiar la clave al repositorio.
 - Openverse tuvo un timeout inicial y luego se recuperó. Se verificó la recuperación posterior sin respaldo: 12 registros recibidos, 11 válidos, un duplicado filtrado y cuatro referencias mostradas. La prueba no oculta esa indisponibilidad transitoria.

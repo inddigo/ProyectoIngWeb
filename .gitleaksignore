@@ -5,8 +5,12 @@
 # Valores ficticios del plan Terraform offline; nunca fueron credenciales válidas.
 f5c735936c3ffa088e52b161c01bc10cdbdd45ac:.github/workflows/devsecops-ci-cd.yml:generic-api-key:141
 f5c735936c3ffa088e52b161c01bc10cdbdd45ac:.github/workflows/devsecops-ci-cd.yml:generic-api-key:142
+ddac6651d32e105ea2498e2e21cb98c9a2d0a994:.github/workflows/devsecops-ci-cd.yml:generic-api-key:141
+ddac6651d32e105ea2498e2e21cb98c9a2d0a994:.github/workflows/devsecops-ci-cd.yml:generic-api-key:142
 
 # Trivy registró las variables PATH del contenedor Python como coincidencias de alta entropía.
 # Son rutas del sistema, no tokens; se ignoran solo estas dos líneas del informe de imagen.
 06de114200101ac9ec6e9243ef95b17a9262fb84:docs/evidence/final-local/trivy-python.json:generic-api-key:62
 06de114200101ac9ec6e9243ef95b17a9262fb84:docs/evidence/final-local/trivy-python.json:generic-api-key:193
+9693cc2c04fd389f48dbb45f816c1e90585532e8:docs/evidence/final-local/trivy-python.json:generic-api-key:62
+9693cc2c04fd389f48dbb45f816c1e90585532e8:docs/evidence/final-local/trivy-python.json:generic-api-key:193

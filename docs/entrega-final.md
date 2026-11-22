@@ -2,9 +2,9 @@
 
 ## Estado de esta versión
 
-Candidata a Entrega Final sobre EP2 (`5df8b25`). El código aún debe pasar el CI remoto y las verificaciones de publicación antes de presentar la web como evidencia de estas funciones. La web pública y `v0.2.2-ep2` corresponden a EP2 mientras no se confirme el nuevo despliegue.
+Candidata a Entrega Final sobre EP2 (`e6c7be1`, 22-11-2026 UTC). CI remoto aprobado en [ejecución 44970123627](https://github.com/inddigo/ProyectoIngWeb/actions/runs/44970123627). Los tres servicios Render se reconstruyeron y quedaron `live` en ese SHA. El job automático de staging fue omitido por tratarse de una rama de PR; esta publicación se hizo manualmente desde Render. La release final aún no está publicada: antes de etiquetar, renovar el secreto `RENDER_API_KEY` vencido en GitHub Actions y volver a comprobar el flujo externo con Openverse real.
 
-La pauta de evaluación usada por el equipo se describe como Entrega Final (EF): arquitectura integrada, multiplataforma, procesamiento web, adaptación verificable, pruebas, DevSecOps, privacidad, observabilidad y defensa individual. La revisión exacta contra el PDF debe quedar confirmada antes de publicar la versión evaluable.
+La pauta de evaluación usada por el equipo se describe como Entrega Final (EF): arquitectura integrada, multiplataforma, procesamiento web, adaptación verificable, pruebas, DevSecOps, privacidad, observabilidad y defensa individual. Antes de presentar, cotejar esta lista con el PDF de la pauta.
 
 ## Funciones incorporadas
 
@@ -64,7 +64,7 @@ La evaluación sintética del motor contiene ocho escenarios: error absoluto med
 
 Prueba integrada local: 45 comprobaciones correctas. Evidencia: `docs/evidence/final-local/integration.json`. Rollback: `docs/evidence/final-local/rollback.json`. Los resultados de tests unitarios se mantienen separados de estas comprobaciones HTTP.
 
-Verificación local al 21 de octubre: 81 pruebas Jest, 26 pruebas Angular, 38 pruebas Python y siete pruebas de scripts (cuatro del despliegue simulado y tres del análisis de usuarios): **152 pruebas aprobadas**. Pasaron lint, formato del backend, compilación web y compilación/sincronización de Capacitor. La integración con la fuente sintética terminó correctamente y está identificada en `full-flow/source-type.json`. No se ejecutó el workflow de estos cambios en GitHub.
+Verificación local al 21 de octubre: 81 pruebas Jest, 26 pruebas Angular, 38 pruebas Python y siete pruebas de scripts (cuatro del despliegue simulado y tres del análisis de usuarios): **152 pruebas aprobadas**. La CI remota del commit `e6c7be1` terminó aprobada: lint, pruebas y auditorías de dependencias, build web y APK Android, Semgrep, Gitleaks, Terraform y build/escaneo/integración Docker. El job automático de staging fue omitido por la rama de PR. Render confirmó los tres servicios reconstruidos y `live` sobre ese SHA.
 
 Semgrep ejecutó 655 reglas sobre 221 archivos sin hallazgos y Gitleaks no detectó secretos en la copia del árbol local analizado. `npm audit --omit=dev` no reportó vulnerabilidades en ambos componentes. Trivy aprobó las tres imágenes locales sin hallazgos HIGH/CRITICAL corregibles, con el mismo criterio `--ignore-unfixed` del pipeline. Los informes están en `docs/evidence/final-local/trivy-*.json`. Estos controles no garantizan la ausencia de otros riesgos.
 
@@ -94,7 +94,7 @@ cd android
 ./gradlew connectedDebugAndroidTest
 ```
 
-**Pendiente de ejecución:** este equipo no tiene Android SDK ni emulador configurados. El APK y el test instrumentado no se dan por aprobados. El workflow preparado tampoco se ejecutó en GitHub porque la ampliación se mantiene local. La compilación/sincronización de Capacitor no sustituye una prueba en Android.
+La CI compiló el APK debug y ejecutó lint nativo. **Pendiente de ejecución:** prueba instrumentada en dispositivo/emulador, revisión manual de accesibilidad y comportamiento en Android real. La compilación del APK no sustituye esas verificaciones.
 
 Para PWA, comprobar instalación, navegación, pérdida y recuperación de conexión y actualización. Solo se cachean recursos de la aplicación; no hay cola de envíos sin conexión. El aviso de actualización pide guardar el trabajo antes de recargar.
 
@@ -104,7 +104,7 @@ Para PWA, comprobar instalación, navegación, pérdida y recuperación de conex
 2. Ejecutar y registrar APK, prueba instrumentada y flujos en Android; completar revisión manual de teclado, lector de pantalla, contraste y pantallas pequeñas.
 3. Actualizar el prototipo Figma y el tablero con esta ampliación. Sus enlaces siguen en README; no se modificaron externamente durante el trabajo local.
 4. Revisar y explicar la implementación entre integrantes; registrar contribuciones reales y preparar la defensa individual.
-5. Cuando se autorice publicar: revisar diff, ejecutar todos los controles, renovar la credencial Render si corresponde, desplegar el SHA aprobado, comprobar Openverse real y generar tag/release final sobre esa revisión. No etiquetar esta versión como final evaluable antes de cerrar esas verificaciones.
+5. Antes de generar la release final: cotejar con la pauta PDF, renovar en GitHub Actions el secreto `RENDER_API_KEY` (la credencial configurada venció el 27-10-2026), ejecutar el workflow de staging sobre el SHA evaluado y comprobar Openverse real con el smoke test. El despliegue manual actual está activo, pero no reemplaza ese smoke test de publicación.
 
 El borrador de presentación está en [presentacion-final.md](presentacion-final.md). No se añadieron pagos, chat, audio, facturación ni competencia entre profesionales: permanecen fuera del alcance acordado.
 

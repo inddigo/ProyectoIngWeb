@@ -39,7 +39,29 @@ jobs:
         run: |
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
             | tar -xz gitleaks
-          ./gitleaks git . --no-banner --redact --exit-code 1
+          set +e
+          ./gitleaks git . --no-banner --redact --report-format json \
+            --report-path "$RUNNER_TEMP/gitleaks-report.json" --exit-code 1
+          scan_status=$?
+          if [ -s "$RUNNER_TEMP/gitleaks-report.json" ]; then
+            python3 - "$RUNNER_TEMP/gitleaks-report.json" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as report_file:
+              findings = json.load(report_file)
+          for finding in findings:
+              print(
+                  "::error file={file},line={line}::Gitleaks rule {rule} in commit {commit}".format(
+                      file=finding.get("File", "unknown"),
+                      line=finding.get("StartLine", 1),
+                      rule=finding.get("RuleID", "unknown"),
+                      commit=finding.get("Commit", "unknown"),
+                  )
+              )
+          PY
+          fi
+          exit "$scan_status"
 
   sast:
     name: Análisis estático (Semgrep)

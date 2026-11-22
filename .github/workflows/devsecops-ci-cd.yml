@@ -52,11 +52,12 @@ jobs:
               findings = json.load(report_file)
           for finding in findings:
               print(
-                  "Gitleaks finding: {file}:{line} rule={rule} commit={commit}".format(
+                  "Gitleaks finding: {file}:{line} rule={rule} commit={commit} fingerprint={fingerprint}".format(
                       file=finding.get("File", "unknown"),
                       line=finding.get("StartLine", 1),
                       rule=finding.get("RuleID", "unknown"),
                       commit=finding.get("Commit", "unknown"),
+                      fingerprint=finding.get("Fingerprint", "unknown"),
                   )
               )
           PY

@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementada en la versión final local. No se ha publicado esta ampliación en Render ni GitHub.
+Implementada, validada en CI y desplegada en staging (Render + PostgreSQL Neon con la migración aditiva `20261022000000_final_adaptation`).
 
 ## Problema
 

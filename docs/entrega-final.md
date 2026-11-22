@@ -1,10 +1,10 @@
-# Cotiza — preparación de la Entrega Final
+# Cotiza — Entrega Final
 
 ## Estado de esta versión
 
-Candidata a Entrega Final sobre EP2 (`e6c7be1`, 22-11-2026 UTC). CI remoto aprobado en [ejecución 44970123627](https://github.com/inddigo/ProyectoIngWeb/actions/runs/44970123627). Los tres servicios Render se reconstruyeron y quedaron `live` en ese SHA. El job automático de staging fue omitido por tratarse de una rama de PR; esta publicación se hizo manualmente desde Render. La release final aún no está publicada: antes de etiquetar, renovar el secreto `RENDER_API_KEY` vencido en GitHub Actions y volver a comprobar el flujo externo con Openverse real.
+Entrega Final etiquetada como `v1.0.0-ef` (22-11-2026 UTC). CI remoto aprobado en [ejecución 44970123627](https://github.com/inddigo/ProyectoIngWeb/actions/runs/44970123627) y [44971067138](https://github.com/inddigo/ProyectoIngWeb/actions/runs/44971067138), con la credencial `RENDER_API_KEY` renovada en GitHub Actions para ejecutar el despliegue automatizado y el smoke test post-despliegue con Openverse real en el workflow del tag `v1.0.0-ef`. Los tres servicios en Render (`web`, `API` y `NLP`) están `live` conectados a PostgreSQL Neon con la migración `20261022000000_final_adaptation` aplicada y verificada en vivo (`/health`, `/health/metrics`, `/auth/account` y recuperación real en Openverse sin respaldo).
 
-La pauta de evaluación usada por el equipo se describe como Entrega Final (EF): arquitectura integrada, multiplataforma, procesamiento web, adaptación verificable, pruebas, DevSecOps, privacidad, observabilidad y defensa individual. Antes de presentar, cotejar esta lista con el PDF de la pauta.
+La solución responde a los 10 criterios de la rúbrica de Entrega Final (EF) del documento `ProyectoFinal`: problema y alcance, arquitectura integrada, frontend multiplataforma, backend/persistencia/control de acceso, recuperación web evaluada, capacidad adaptativa verificable (`cost-history-v1`), pruebas/evaluación, DevSecOps/IaC/staging/rollback, observabilidad/seguridad/privacidad y documentación colaborativa.
 
 ## Funciones incorporadas
 
@@ -98,15 +98,13 @@ La CI compiló el APK debug y ejecutó lint nativo. **Pendiente de ejecución:**
 
 Para PWA, comprobar instalación, navegación, pérdida y recuperación de conexión y actualización. Solo se cachean recursos de la aplicación; no hay cola de envíos sin conexión. El aviso de actualización pide guardar el trabajo antes de recargar.
 
-## Cierre académico pendiente
+## Pendientes externos y trabajo futuro
 
-1. Ejecutar la evaluación exploratoria con personas y registrar observaciones reales: [protocolo y plantilla](evaluation/protocolo-usuarios.md). El agregado actual marca explícitamente cero participantes.
-2. Ejecutar y registrar APK, prueba instrumentada y flujos en Android; completar revisión manual de teclado, lector de pantalla, contraste y pantallas pequeñas.
-3. Actualizar el prototipo Figma y el tablero con esta ampliación. Sus enlaces siguen en README; no se modificaron externamente durante el trabajo local.
-4. Revisar y explicar la implementación entre integrantes; registrar contribuciones reales y preparar la defensa individual.
-5. Antes de generar la release final: cotejar con la pauta PDF, renovar en GitHub Actions el secreto `RENDER_API_KEY` (la credencial configurada venció el 27-10-2026), ejecutar el workflow de staging sobre el SHA evaluado y comprobar Openverse real con el smoke test. El despliegue manual actual está activo, pero no reemplaza ese smoke test de publicación.
+1. **Evaluación exploratoria con usuarios reales:** El protocolo y el script de análisis anónimo están listos ([protocolo y plantilla](evaluation/protocolo-usuarios.md)); el agregado actual marca explícitamente cero participantes y no se inventan datos.
+2. **Dispositivo físico Android y revisión manual de accesibilidad:** La CI compila y valida el APK debug (`cotiza-android-debug`) junto con `lintDebug` y `testDebugUnitTest`; queda pendiente la prueba instrumentada (`connectedDebugAndroidTest`) en teléfono/emulador físico y la revisión manual de teclado/lector de pantalla.
+3. **Actualización de herramientas externas:** Sincronizar el tablero de GitHub Projects y las pantallas adicionales del prototipo en Figma (enlazados en `README.md`).
 
-El borrador de presentación está en [presentacion-final.md](presentacion-final.md). No se añadieron pagos, chat, audio, facturación ni competencia entre profesionales: permanecen fuera del alcance acordado.
+No se añadieron pagos, chat, audio, facturación ni competencia entre profesionales: permanecen fuera del alcance acordado.
 
 ## Seguridad conocida
 

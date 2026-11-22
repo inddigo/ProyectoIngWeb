@@ -1,40 +1,45 @@
-> **Candidata a Entrega Final:** [guía, funciones y verificaciones pendientes](docs/entrega-final.md). Para revisar: `docker compose -p cotiza-final-local -f docker-compose.yml -f docker-compose.final-local.yml up -d --build --wait`, y abrir `http://localhost:18080`. El staging publicado sigue en EP2 hasta que termine la validación CI y se recupere el despliegue Render.
->
-> **Staging publicado de EP2:** Render Free + Neon Free. Configuración activa: `terraform/render`; guía: [docs/staging.md](docs/staging.md). Google Cloud y sus scripts quedan históricos. Staging público: [cotiza-ep2-web.onrender.com](https://cotiza-ep2-web.onrender.com). Las funciones nuevas de la final se revisan localmente.
+> **Entrega Final (`v1.0.0-ef`):** desplegada en staging público [cotiza-ep2-web.onrender.com](https://cotiza-ep2-web.onrender.com) (Render Free + PostgreSQL Neon Free, configuración IaC en [`terraform/render/`](terraform/render)). Resumen técnico y evidencias en [docs/entrega-final.md](docs/entrega-final.md) y [docs/staging.md](docs/staging.md).
 
 # Cotiza — Plataforma de cotización inteligente para servicios personalizados
 
 Plataforma para profesionales que trabajan por encargo: talleres, estudios, pastelerías,
 organizadores de eventos y freelancers. Convierte solicitudes ambiguas en detalles
-claros, referencias y cotizaciones según costos reales. En esta versión los rubros
-disponibles son encargos generales (con campos editables), pastelería y tatuajes. Transforma pedidos escritos en lenguaje natural
+claros, referencias visuales con procedencia y cotizaciones adaptadas a los costos e historial
+propio del profesional. En esta versión los rubros disponibles son encargos generales (con
+campos editables), pastelería y tatuajes. Transforma pedidos escritos en lenguaje natural
 (*"quiero una torta vegana para 20 personas con temática de Batman"*, *"un tatuaje de 15 cm
 en el antebrazo a color"*) en formularios estructurados mediante NLP (`spaCy` + reglas), obtiene,
 limpia, normaliza y deduplica referencias visuales desde la Web (Openverse API), las indexa en
-PostgreSQL con metadatos de procedencia y permite al profesional cotizar con una calculadora de
-costos asistida por reglas. El cliente sigue su pedido y acepta o rechaza la cotización. Ambos paneles incluyen búsqueda por texto o número, filtros de rubro/estado, resumen de pedidos y actualización manual. El cliente puede cancelar antes de recibir una cotización.
+PostgreSQL con metadatos de procedencia y asiste al profesional con una calculadora de costos
+y recomendaciones explicables basadas en su historial aceptado (`cost-history-v1`). El cliente
+sigue su pedido, puede cancelarlo antes de ser cotizado y acepta o rechaza la cotización. Ambos
+paneles incluyen búsqueda por texto o número, filtros de rubro/estado, resumen de pedidos y
+actualización manual.
 
-- **Definición del proyecto y especificación EP2** (problema, fuente web, limpieza, métricas, diseño adaptativo): [docs/proyecto.md](docs/proyecto.md)
-- **Entrega final local**: [docs/entrega-final.md](docs/entrega-final.md), [reglas y privacidad](docs/ADR/007-recomendaciones-explicables-y-privacidad.md), [evaluación con usuarios](docs/evaluation/protocolo-usuarios.md) y [guion de defensa](docs/presentacion-final.md).
-- **Arquitectura** (contexto C4, contenedores, despliegue, modelo de datos e índices, flujo, ADR 001–006): [docs/arquitectura.md](docs/arquitectura.md)
+- **Entrega final y evidencias**: [docs/entrega-final.md](docs/entrega-final.md), [reglas adaptativas y privacidad (ADR-007)](docs/ADR/007-recomendaciones-explicables-y-privacidad.md) y [evaluación con usuarios](docs/evaluation/protocolo-usuarios.md)
+- **Definición del proyecto**: [docs/proyecto.md](docs/proyecto.md)
+- **Arquitectura** (contexto C4, contenedores, despliegue, modelo de datos e índices, flujo, ADR 001–007): [docs/arquitectura.md](docs/arquitectura.md)
 - **Ambiente de staging e infraestructura (Terraform)**: [docs/staging.md](docs/staging.md)
 - **Prototipo en Figma**: [E1 — prototipo de interfaz](https://www.figma.com/design/u0EsbFF2IfE2B7LOor9WzQ/E1?node-id=3-90)
 - **Tablero del proyecto**: [GitHub Projects — IngWeb](https://github.com/users/inddigo/projects/3)
 
 ---
 
-## Estado de preparación de EP2
+## Equipo y distribución de responsabilidades
 
-Correcciones y validación técnica: [guía de entrega y evidencias](docs/entrega2.md). El staging público está desplegado en [Render](https://cotiza-ep2-web.onrender.com) con PostgreSQL Neon y flujo real verificado. El flujo de CI utiliza una fuente sintética explícita; el despliegue exige datos reales de Openverse.
+| Integrante | Usuario Git / GitHub | Responsabilidades principales (trazables en historial Git) |
+|---|---|---|
+| **Joshua Villavicencio** | `inddigo` | Arquitectura inicial (EP1), base multiplataforma Ionic/Angular/Capacitor, estructura NestJS/FastAPI/Docker, pipeline DevSecOps inicial, configuración de tablero GitHub Projects y gestión de merges/releases. |
+| **Fernando Figueroa** | `Ferfishy` | Integración de EP2, propagación de contexto de correlación en NestJS, endurecimiento de imágenes Docker y auditoría de dependencias para Trivy, correcciones de lint y pruebas en el servicio Python. |
+| **Germán Oses** | `German-Oses` | Enlace a Figma, mejoras de calidad web/privacidad/contratos en EP2, infraestructura Terraform y despliegue gratuito en Render + Neon, encargos generales, motor adaptativo explicable `cost-history-v1`, controles de privacidad/cuenta, observabilidad/métricas, pruebas de rollback/degradación y cierre CI/CD de la Entrega Final. |
 
-## 1. Continuidad y correcciones de la EP1
+---
 
-En la **Entrega Parcial 2 (EP2)** se reutiliza la base arquitectónica, multiplataforma y DevSecOps de la EP1, incorporando las siguientes mejoras trazables (detalle en [docs/proyecto.md](docs/proyecto.md#4-continuidad-y-correcciones-incorporadas-desde-la-ep1) y [ADR-006](docs/ADR/006-recuperacion-web-y-calidad-ep2.md)):
+## 1. Evolución incremental (EP1 → EP2 → Entrega Final)
 
-1. **Pipeline de recuperación, limpieza, normalización y deduplicación web (`service-python/app/services/scraper.py`):** Decodificación de entidades HTML, eliminación de etiquetas/ruido, normalización Unicode `NFKC`, canonización de URLs HTTPS (eliminando parámetros de tracking `utm_*`/`fbclid`), estandarización de licencias Creative Commons, caché en memoria con TTL (`3600s`) y deduplicación por URL y título.
-2. **Persistencia e indexación con metadatos de procedencia (`backend-nestjs/prisma/schema.prisma`):** Migración `20261018000000_ep2_web_references_metadata` que añade `source_url`, `license`, `creator`, `query_used`, `retrieved_at`, restricción única compuesta `@@unique([orderId, imageUrl])`, índices B-Tree sobre `order_id`, `source` y `query_used`, y el endpoint de consulta `GET /api/v1/orders/web-references`.
-3. **Resiliencia y observabilidad correlacionada:** Reintentos limitados (`retry({ count: 1, delay: 150 })`) y timeout (`10s`) en `NlpService`, propagación de `X-Correlation-Id` de extremo a extremo entre NestJS y FastAPI, registros estructurados en formato JSON con medición de latencia (`durationMs`), y métricas de salud en `/health`.
-4. **Evaluación cuantitativa de información recuperada:** Nuevo endpoint `GET /api/v1/nlp/metrics` (y pasarela `GET /api/v1/orders/nlp-metrics`) que calcula porcentaje de registros válidos, porcentaje de duplicados filtrados, latencia promedio, tasa de respaldo y exactitud sobre un benchmark reproducible.
+1. **Base arquitectónica y DevSecOps (EP1):** Frontend multiplataforma Angular 20 + Ionic 8 + Capacitor 8 (web, PWA y Android), API REST en NestJS 11 con JWT/roles y PostgreSQL 16 (Prisma), servicio Python FastAPI + spaCy, Docker Compose y pipeline DevSecOps en GitHub Actions.
+2. **Recuperación web, calidad y staging (EP2):** Limpieza, normalización Unicode `NFKC`, canonización HTTPS, caché TTL (`3600s`) y deduplicación en dos niveles (`service-python/app/services/scraper.py` + `UNIQUE(order_id, image_url)` en PostgreSQL), metadatos de procedencia, reintentos/timeout, `X-Correlation-Id`, métricas en `/api/v1/orders/nlp-metrics` y staging automatizado en Render Free + Neon Free ([ADR-006](docs/ADR/006-recuperacion-web-y-calidad-ep2.md)).
+3. **Capacidad adaptativa verificable, privacidad, observabilidad y rollback (Entrega Final):** Migración aditiva `20261022000000_final_adaptation`, perfil profesional de costos (`GET/PUT /api/v1/quotes/profile`), motor explicable `cost-history-v1` (`POST /api/v1/quotes/recommend/:orderId`) con consentimiento opt-in y retiro de historial (`DELETE /api/v1/quotes/history`), gestión y baja de cuenta (`GET/PATCH/DELETE /auth/account`), métricas HTTP y alertas en `/health/metrics`, build automatizado de APK Android debug en CI y verificación de rollback local ([ADR-007](docs/ADR/007-recomendaciones-explicables-y-privacidad.md)).
 
 ---
 
@@ -85,13 +90,13 @@ Swagger de NestJS: `/api/docs`; especificación OpenAPI: `/api/docs-json`. FastA
 
 Todas las respuestas incluyen la cabecera `X-Correlation-Id` para trazabilidad de extremo a extremo.
 
-La ampliación final local incorpora `GET/PUT /api/v1/quotes/profile`, `DELETE /api/v1/quotes/history` y `POST /api/v1/quotes/recommend/:orderId`, exclusivos de `BAKER`; `GET/PATCH/DELETE /auth/account` para gestionar la cuenta autenticada; y `GET /health/metrics` para diagnóstico agregado. El desglose de una cotización acepta costos e insumos, con totales recalculados en el servidor, y un `recommendationId` opcional. Contratos y límites: [entrega-final.md](docs/entrega-final.md).
-
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
 | `GET` | `/health` | Público | Estado de NestJS, PostgreSQL y servicio Python + latencias (`dbLatencyMs`, `nlpLatencyMs`, `correlationId`) |
+| `GET` | `/health/metrics` | Público | Contadores HTTP, p95, tasa 5xx y alertas básicas en ventana móvil de 60 s |
 | `POST` | `/auth/register` | Público | Registro de cliente (`CLIENT`); las cuentas profesionales se aprovisionan de forma controlada |
 | `POST` | `/auth/login` | Público | Autenticación; devuelve `access_token` JWT |
+| `GET` / `PATCH` / `DELETE` | `/auth/account` | Autenticado | Exportación de datos propios, actualización de nombre y baja de cuenta validando contraseña |
 | `POST` | `/api/v1/orders/nlp-structure` | Público | Texto libre → atributos + referencias web limpias + `extraction_meta` (NestJS → FastAPI con retry y fallback) |
 | `GET` | `/api/v1/orders/nlp-metrics` | Público | Métricas de calidad de recuperación web y evaluación del benchmark NLP |
 | `POST` | `/api/v1/orders` | `CLIENT` | Confirma un pedido y persiste sus `webReferences` deduplicadas con metadatos de procedencia |
@@ -100,8 +105,11 @@ La ampliación final local incorpora `GET/PUT /api/v1/quotes/profile`, `DELETE /
 | `PATCH` | `/api/v1/orders/:id/status` | `CLIENT` (dueño) | Acepta (`ACCEPTED_BY_CLIENT`) o rechaza (`REJECTED_BY_CLIENT`) una cotización |
 | `PATCH` | `/api/v1/orders/:id/cancel` | `CLIENT` (dueño) | Cancela solo pedidos aún pendientes de cotización, conservando historial |
 | `GET` | `/api/v1/orders?status=` | `BAKER` / `ADMIN` | Lista pedidos filtrados por estado |
+| `GET` / `PUT` | `/api/v1/quotes/profile` | `BAKER` | Perfil propio de costos (valor hora, fijos, recargo y consentimiento de historial) |
+| `DELETE` | `/api/v1/quotes/history` | `BAKER` | Retira historial propio, elimina recomendaciones y desactiva la adaptación |
+| `POST` | `/api/v1/quotes/recommend/:orderId` | `BAKER` | Calcula y persiste recomendación explicable (`cost-history-v1`) comparada contra línea base |
 | `GET` | `/api/v1/quotes/calculate/:orderId` | `BAKER` | Estimación referencial de precio por reglas según atributos del rubro |
-| `POST` | `/api/v1/quotes` | `BAKER` | Crea cotización y actualiza el pedido a `QUOTED` en una transacción ACID |
+| `POST` | `/api/v1/quotes` | `BAKER` | Crea cotización (recalculando totales en servidor y validando `recommendationId`) en transacción ACID |
 
 ### 4.2. API interna — Servicio Especializado Python (`service-python`, puerto `8000`)
 
@@ -124,8 +132,11 @@ Expuestas en `/api/v1/nlp/metrics` y verificadas en [`service-python/app/tests/t
 - **Tiempo de respuesta (`avg_latency_ms`):** se mide en cada ejecución; no se garantiza una latencia de la fuente externa. La caché se verifica con reloj controlado.
 - **Exactitud de extracción de entidades (`entity_extraction_accuracy_pct`):** **100 % (21/21 atributos)** sobre los 6 casos multirubro del conjunto `EVALUATION_BENCHMARK`.
 
-### 5.2. Especificación preliminar de la capacidad adaptativa (Módulo 3)
-El diseño completo (variables de usuario, uso de información web, mecanismo híbrido `spaCy` + reglas + calibración histórica, explicabilidad, control del usuario, mitigación de sesgos y plan de evaluación) se encuentra detallado en [docs/proyecto.md — Sección 8](docs/proyecto.md#8-diseño-preliminar-de-la-capacidad-adaptativa-o-inteligente-módulo-3).
+### 5.2. Capacidad adaptativa implementada (`cost-history-v1`)
+Implementada en NestJS sobre PostgreSQL con reglas deterministas y explicables ([ADR-007](docs/ADR/007-recomendaciones-explicables-y-privacidad.md) y [docs/entrega-final.md](docs/entrega-final.md)):
+- **Funcionamiento:** Parte de los costos reales ingresados (materiales, mano de obra y costos fijos recalculados en servidor) y el perfil propio del profesional. Cuando el profesional habilita explícitamente el uso de historial y cuenta con al menos 3 cotizaciones aceptadas comparables en los últimos 180 días, ajusta el recargo hacia la mediana histórica con un peso acotado (`min(0.5, aceptados/20)`), límite máximo de ±15 puntos y piso en el costo actual.
+- **Transparencia y control:** Cada recomendación guarda versión, entradas, resultado y motivos legibles, se invalida si cambian los costos, y el profesional puede editarla, ignorarla o retirar todo su historial (`DELETE /api/v1/quotes/history`).
+- **Comparación frente a línea base (`scripts/evaluate-final.cjs`):** Sobre los 8 escenarios sintéticos reproducibles ([`docs/evidence/final-local/adaptation.json`](docs/evidence/final-local/adaptation.json)), el error absoluto medio baja de **$7.537,50 CLP** (línea base sin historial) a **$5.430 CLP** (reglas adaptativas). Estos casos validan el comportamiento del motor y no sustituyen resultados de mercado ni pruebas con usuarios reales.
 
 ---
 
@@ -177,14 +188,19 @@ npx cap open android      # abre Android Studio; o: cd android && ./gradlew asse
 
 ---
 
-## 8. Pruebas automatizadas y calidad
+## 8. Pruebas automatizadas, degradación y rollback
 
 ```bash
-cd backend-nestjs && npm run lint && npm test          # Jest (pruebas unitarias de servicios, guards, reintentos y deduplicación)
-cd frontend && npm run lint && npm run test:ci         # Karma + Chrome headless (componentes, guards, calculadora y atributos)
-cd service-python && ruff check . && pytest            # pytest (NLP, limpieza HTML, deduplicación, fallback y métricas)
-cd terraform && terraform fmt -check -recursive && terraform validate
+cd backend-nestjs && npm run lint && npm test          # Jest (81 pruebas: servicios, guards, motor adaptativo, privacidad)
+cd frontend && npm run lint && npm run test:ci         # Karma + Chrome headless (26 pruebas: componentes, guards, calculadora)
+cd service-python && ruff check . && pytest            # pytest (38 pruebas: NLP, limpieza HTML, deduplicación, fallback, métricas)
+cd terraform/render && terraform fmt -check -recursive && terraform validate
+node scripts/evaluate-final.cjs docs/evidence/final-local/adaptation.json
 ```
+
+- **Integración local completa:** `python scripts/final-check.py` (45 comprobaciones HTTP de permisos, adaptación, historial y privacidad; evidencia en [`docs/evidence/final-local/integration.json`](docs/evidence/final-local/integration.json)).
+- **Degradación controlada:** `python scripts/verify-local-degradation.py` verifica caída y recuperación de Python sin inventar referencias ([`docs/evidence/final-local/degradation.json`](docs/evidence/final-local/degradation.json)).
+- **Estrategia de rollback probada:** La migración `20261022000000_final_adaptation` es aditiva; `./scripts/verify-rollback.ps1` demuestra el retorno del backend a la versión estable de EP2 sobre el esquema ampliado y la restauración posterior ([`docs/evidence/final-local/rollback.json`](docs/evidence/final-local/rollback.json)). En Render, ante un fallo de despliegue o salud, se revierte al deploy previo estable desde el historial de despliegues o ejecutando `scripts/deploy-render.py` con el SHA anterior aprobado.
 
 ---
 
@@ -196,12 +212,12 @@ Archivo: [`.github/workflows/devsecops-ci-cd.yml`](.github/workflows/devsecops-c
 |---|---|---|
 | `secrets-scan` | Gitleaks sobre todo el historial git | se detecta un secreto expuesto |
 | `sast` | Semgrep (`p/default`, `p/typescript`, `p/python`) | existen hallazgos de seguridad |
-| `backend` | `npm ci`, ESLint + Prettier, Jest con cobertura, build, `npm audit` | falla lint/prueba/build o hay vulnerabilidades HIGH/CRITICAL |
-| `frontend` | `npm ci`, angular-eslint, Karma headless, build web/PWA, build Android + `cap sync`, `npm audit` | ídem |
-| `python` | `pip install`, Ruff (lint + formato), pytest con cobertura (NLP + scraper + métricas), `pip-audit` | ídem |
-| `terraform` | `fmt -check`, `init`, `validate`, `plan` de staging | configuración IaC inválida |
-| `docker` | **Depende de los 6 anteriores.** `docker compose build`, Trivy en las 3 imágenes, `docker compose up --wait` y `./scripts/smoke-test.sh` | vulnerabilidad HIGH/CRITICAL corregible o falla el flujo E2E |
-| `deploy-staging` | **Depende de `docker`.** Despliega versión verificada en `main`/tags `v*` y ejecuta health check + smoke test contra `STAGING_URL` | falla el endpoint `/health` o el smoke test post-despliegue |
+| `backend` | `npm ci`, ESLint + Prettier, Jest con cobertura, build, `evaluate-final.cjs`, `npm audit --omit=dev` | falla lint/prueba/build o hay vulnerabilidades HIGH/CRITICAL |
+| `frontend` | `npm ci`, angular-eslint, Karma headless, build web/PWA, `cap sync` + APK Android debug + `lintDebug`, `npm audit --omit=dev` | ídem |
+| `python` | `pip install`, Ruff (lint + formato), pytest con cobertura, tests de deploy/estudio de usuarios, `pip-audit` | ídem |
+| `terraform` | `fmt -check`, `init`, `validate`, `plan` offline en `terraform/render` | configuración IaC inválida |
+| `docker` | **Depende de los 6 anteriores.** `docker compose build`, Trivy en las 3 imágenes, `docker compose up --wait`, `./scripts/smoke-test.sh` y `scripts/final-check.py` | vulnerabilidad HIGH/CRITICAL corregible o falla el flujo E2E |
+| `deploy-staging` | **Depende de `docker`.** Despliega versión verificada en `main`/tags `v*` en Render Free y ejecuta health check + smoke test con Openverse real contra `STAGING_URL` | falla el endpoint `/health`, la revisión desplegada o el smoke test post-despliegue |
 
 ---
 
@@ -212,8 +228,8 @@ Archivo: [`.github/workflows/devsecops-ci-cd.yml`](.github/workflows/devsecops-c
 - **Secrets (`secrets.*`):** `JWT_SECRET` y `DB_PASSWORD` opcionales para CI; `RENDER_API_KEY` y `SEED_BAKER_PASSWORD` para staging (ver [staging](docs/staging.md)).
 - **Archivos de ejemplo:** [`.env.example`](.env.example), [`backend-nestjs/.env.example`](backend-nestjs/.env.example), [`service-python/.env.example`](service-python/.env.example) y [`terraform/render/variables.tf`](terraform/render/variables.tf).
 
-### 10.2. Limitaciones actuales identificadas y trabajo futuro (hacia Entrega Final)
-1. **Caché de referencias en memoria local:** El caché con TTL de `service-python` reside en la memoria del proceso; si se escalan múltiples instancias en el proveedor, cada réplica mantiene su propio caché.
-2. **Cobertura de rubros:** Se admiten `general` (tipo de trabajo, cantidad, materiales, plazo y entrega), `cake` (pastelería) y `tattoo` (tatuajes). Los encargos generales usan extracción básica y corrección manual; se cotizan con los costos ingresados por el profesional, sin reglas específicas de otros rubros.
-3. **Trabajo para el Módulo 3 (Entrega Final):** Completar la calibración automática de precios e insumos utilizando el histórico acumulado de cotizaciones aceptadas/rechazadas por profesional y ejecutar la evaluación comparativa frente a la línea base no adaptativa.
+### 10.2. Limitaciones conocidas y trabajo futuro
+1. **Caché de referencias y métricas en memoria por proceso:** El caché con TTL de `service-python` y la ventana móvil de `/health/metrics` residen en memoria por instancia; al escalar horizontalmente requerirían almacenamiento compartido (por ejemplo, Redis/Prometheus).
+2. **Cobertura de rubros y motor determinista:** Se admiten `general`, `cake` y `tattoo`. El motor `cost-history-v1` es determinista y transparente (mediana acotada del historial propio), no un modelo predictivo de precios de mercado; pagos, chat, audio y facturación quedan fuera del alcance.
+3. **Evaluación con usuarios y prueba en dispositivo físico Android:** El protocolo y script de análisis anónimo ([`docs/evaluation/protocolo-usuarios.md`](docs/evaluation/protocolo-usuarios.md), `scripts/analyze-user-study.py`) y la compilación del APK debug en CI (`cotiza-android-debug`) están listos, pero las observaciones con usuarios reales y la prueba instrumentada en teléfono/emulador físico permanecen abiertas para trabajo futuro / demostración.
 

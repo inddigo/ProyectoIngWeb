@@ -52,7 +52,7 @@ jobs:
               findings = json.load(report_file)
           for finding in findings:
               print(
-                  "::error file={file},line={line}::Gitleaks rule {rule} in commit {commit}".format(
+                  "Gitleaks finding: {file}:{line} rule={rule} commit={commit}".format(
                       file=finding.get("File", "unknown"),
                       line=finding.get("StartLine", 1),
                       rule=finding.get("RuleID", "unknown"),

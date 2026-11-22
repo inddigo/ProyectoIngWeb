@@ -1,5 +1,7 @@
 # Definición del proyecto y especificación EP2
 
+Esta especificación conserva el diseño de EP2. La implementación posterior del historial, perfil y recomendaciones se describe en [entrega-final.md](entrega-final.md) y [ADR-007](ADR/007-recomendaciones-explicables-y-privacidad.md); está disponible localmente.
+
 ## 1. Problema y contexto
 Los profesionales que trabajan con pedidos personalizados (pastelerías, tatuadores,
 carpinteros, organizadores de eventos, freelancers) reciben solicitudes por WhatsApp o
@@ -56,7 +58,7 @@ Esta trazabilidad registra brechas técnicas detectadas en el repositorio. El eq
 
 ### 5.3. Restricciones legales, éticas, `robots.txt` y privacidad
 - **Cumplimiento de `robots.txt` y términos de servicio:** En lugar de realizar *scraping* intrusivo sobre HTML de sitios de terceros que lo prohíben en su `robots.txt`, se consume el endpoint oficial de la API pública de Openverse, identificando el cliente con la cabecera `User-Agent: CotizaAcademicBot/1.2 (+https://github.com/inddigo/ProyectoIngWeb; uso academico responsable)`.
-- **Derechos de autor y atribución:** Solo se recuperan imágenes bajo licencias abiertas (`CC BY`, `CC BY-SA`, `CC0`, `PDM`). Cada registro conserva y muestra en la interfaz el proveedor, el autor (`creator`), la licencia normalizada y el enlace a la obra original (`source_url`).
+- **Derechos de autor y atribución:** Se consultan las imágenes indexadas por Openverse; pueden incluir distintas licencias Creative Commons y condiciones como NC o SA. No se presupone autorización para uso comercial ni para realizar un diseño derivado. Cada registro conserva y muestra proveedor, autor, licencia informada y enlace original para revisar sus condiciones. Si falta licencia, se indica su ausencia.
 - **Privacidad y minimización de datos:** **Nunca se envía el texto crudo del cliente (`raw_text`) ni datos personales a Openverse.** El motor NLP extrae primero únicamente la entidad genérica de temática o estilo (ej. `"Batman cake"` o `"Acuarela tattoo"`) y solo ese término sanitizado se envía a la API externa.
 
 ---

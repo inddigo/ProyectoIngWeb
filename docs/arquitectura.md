@@ -2,6 +2,8 @@
 
 Los diagramas usan [Mermaid](https://mermaid.js.org/) y GitHub los renderiza directamente.
 
+La ampliación de entrega final está disponible únicamente en el stack local. El staging Render sigue en EP2. Reglas y controles nuevos: [ADR-007](ADR/007-recomendaciones-explicables-y-privacidad.md).
+
 ## 1. Diagrama de contexto (C4 nivel 1)
 
 ```mermaid
@@ -80,6 +82,14 @@ sequenceDiagram
     P->>FE: abre panel "Por cotizar"
     FE->>BE: GET /api/v1/orders (JWT BAKER), búsqueda y filtros locales
     P->>FE: calculadora de costos → precio final
+    opt Recomendación explicable
+        FE->>BE: POST /api/v1/quotes/recommend/:orderId (costos actuales)
+        BE->>DB: perfil y hasta 50 decisiones propias, últimos 180 días
+        BE->>BE: coincidencia de atributos, mediana y ajuste acotado
+        BE->>DB: persistir entrada, resultado y versión
+        BE-->>FE: precio base, sugerencia, razones y advertencias
+        P->>FE: aplica, modifica o descarta sugerencia
+    end
     FE->>BE: POST /api/v1/quotes
     BE->>DB: TX: transición condicional a QUOTED + INSERT quote
     C->>FE: acepta la cotización
@@ -90,13 +100,18 @@ sequenceDiagram
 Si FastAPI no responde tras el reintento acotado, NestJS responde con `fallback: true` y el cliente completa los campos
 manualmente; `/health` reporta `pythonService: down` y las latencias de diagnóstico (`dbLatencyMs`, `nlpLatencyMs`) sin marcar la API como caída.
 
-## 4. Modelo de datos e indexación (EP1 + EP2)
+## 4. Modelo de datos e indexación
 
 ```mermaid
 erDiagram
     users ||--o{ orders : "realiza"
     orders ||--o{ web_references : "tiene"
     orders ||--o| quotes : "recibe"
+    users ||--o| professional_profiles : "configura"
+    users ||--o{ quotes : "emite (autor opcional en registros antiguos)"
+    users ||--o{ recommendations : "consulta"
+    orders ||--o{ recommendations : "contexto"
+    recommendations o|--o| quotes : "orienta"
 
     users {
         uuid id PK
@@ -136,6 +151,23 @@ erDiagram
         decimal estimated_price
         text details
         jsonb breakdown "insumos, mano de obra, margen"
+        uuid professional_id FK "nullable"
+        uuid recommendation_id FK,UK "nullable"
+    }
+    professional_profiles {
+        uuid user_id PK,FK
+        decimal hourly_rate
+        decimal fixed_costs
+        float profit_margin
+        boolean use_history "voluntario, false por defecto"
+    }
+    recommendations {
+        uuid id PK
+        uuid order_id FK
+        uuid professional_id FK
+        jsonb input
+        jsonb result "versión, explicación, métricas"
+        timestamp created_at
     }
 ```
 
@@ -144,6 +176,7 @@ Migraciones versionadas:
 - `backend-nestjs/prisma/migrations/20261018000000_ep2_web_references_metadata/migration.sql` (EP2: metadatos de procedencia, restricción única compuesta e índices de consulta).
 
 - `backend-nestjs/prisma/migrations/20261021000000_cancel_orders/migration.sql` (cancelación conservando historial).
+- `backend-nestjs/prisma/migrations/20261022000000_final_adaptation/migration.sql` (perfil, autoría y trazabilidad de recomendaciones; aplicada solo en la base local de pruebas).
 
 ### Ciclo de vida del pedido
 

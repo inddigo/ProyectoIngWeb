@@ -1,0 +1,28 @@
+{
+  "status": "pending_real_observations",
+  "participants": 0,
+  "pairedParticipants": 0,
+  "conditions": {
+    "baseline": {
+      "observations": 0,
+      "seconds": null,
+      "corrections": null,
+      "success": null,
+      "utility": null,
+      "understanding": null
+    },
+    "adaptive": {
+      "observations": 0,
+      "seconds": null,
+      "corrections": null,
+      "success": null,
+      "utility": null,
+      "understanding": null
+    }
+  },
+  "pairedMeanTimeReductionPercent": null,
+  "limitations": [
+    "Evaluación exploratoria; el orden y las tareas pueden introducir sesgos.",
+    "No demuestra causalidad ni significación estadística."
+  ]
+}

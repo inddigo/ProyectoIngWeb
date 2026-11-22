@@ -1,0 +1,17 @@
+# Ambiente local de la entrega final: no comparte imágenes, puertos ni base de datos con EP2.
+name: cotiza-final-local
+services:
+  postgres:
+    ports: !override ["127.0.0.1:55432:5432"]
+  python-service:
+    image: cotiza-final-python:local
+    ports: !override ["127.0.0.1:18000:8000"]
+  backend:
+    image: cotiza-final-api:local
+    ports: !override ["127.0.0.1:13000:3000"]
+    environment:
+      APP_REVISION: final-local
+      CORS_ORIGINS: http://localhost:18080,http://127.0.0.1:18080,http://localhost:4200,https://localhost,capacitor://localhost
+  frontend:
+    image: cotiza-final-web:local
+    ports: !override ["127.0.0.1:18080:8080"]

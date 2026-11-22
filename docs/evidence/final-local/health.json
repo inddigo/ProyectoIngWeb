@@ -1,0 +1,24 @@
+{
+  "revision": "final-local",
+  "services": {
+    "nestjs": "up",
+    "database": "up",
+    "pythonService": "up"
+  },
+  "metrics": {
+    "service": "backend-nestjs",
+    "requestsTotal": 53,
+    "serverErrorsTotal": 0,
+    "windowSeconds": 60,
+    "sampleLimit": 256,
+    "recentRequests": 0,
+    "serverErrorRate": null,
+    "p95LatencyMs": null,
+    "alerts": []
+  },
+  "webSource": {
+    "status": "unknown",
+    "lastSuccessAt": null
+  },
+  "alerts": []
+}

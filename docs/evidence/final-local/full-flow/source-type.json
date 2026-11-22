@@ -1,0 +1,6 @@
+{
+  "source": "explicit-ci-fixture",
+  "realInternetEvidence": false,
+  "result": "passed",
+  "note": "La primera prueba con Openverse real encontró timeout y cero referencias; el flujo determinista usa datos sintéticos identificados."
+}

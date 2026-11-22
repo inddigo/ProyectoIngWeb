@@ -2,12 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
+import { AuthUser } from '../common/decorators/current-user.decorator';
 
 export type PublicUser = Omit<User, 'password'>;
 
@@ -39,6 +41,24 @@ export class AuthService {
         role: user.role,
       },
     };
+  }
+
+  updateAccount(user: AuthUser, name: string) {
+    return this.usersService.updateName(user.userId, name);
+  }
+
+  exportAccount(user: AuthUser) {
+    return this.usersService.exportAccount(user.userId);
+  }
+
+  async deleteAccount(user: AuthUser, password: string) {
+    if (Buffer.byteLength(password, 'utf8') > 72)
+      throw new UnauthorizedException('Contraseña incorrecta');
+    const current = await this.usersService.findById(user.userId);
+    if (!current || !(await bcrypt.compare(password, current.password)))
+      throw new UnauthorizedException('Contraseña incorrecta');
+    await this.usersService.deleteAccount(user.userId);
+    return { deleted: true };
   }
 
   async register(data: RegisterDto) {

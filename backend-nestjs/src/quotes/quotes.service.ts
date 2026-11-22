@@ -8,6 +8,8 @@ import { OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../common/decorators/current-user.decorator';
 import { CreateQuoteDto } from './dto/create-quote.dto';
+import { costFingerprint, costSummary } from './recommendation.engine';
+import { CostsDto } from './dto/recommendation.dto';
 
 export const BASE_PRICE_PER_SERVING = 3000;
 export const RESTRICTION_SURCHARGE = 5000;
@@ -79,7 +81,7 @@ export class QuotesService {
     };
   }
 
-  async createQuote(dto: CreateQuoteDto) {
+  async createQuote(dto: CreateQuoteDto, user: AuthUser) {
     const { orderId, estimatedPrice, details, breakdown } = dto;
 
     const order = await this.prisma.order.findUnique({
@@ -94,6 +96,30 @@ export class QuotesService {
       );
     }
 
+    const calculated = breakdown
+      ? { ...breakdown, ...costSummary(breakdown), version: 'cost-v1' }
+      : undefined;
+    if (dto.recommendationId) {
+      const recommendation = await this.prisma.recommendation.findFirst({
+        where: {
+          id: dto.recommendationId,
+          orderId,
+          professionalId: user.userId,
+        },
+      });
+      if (!recommendation)
+        throw new BadRequestException(
+          'La recomendación no pertenece a esta cotización',
+        );
+      if (
+        !breakdown ||
+        costFingerprint(breakdown) !==
+          costFingerprint(recommendation.input as unknown as CostsDto)
+      )
+        throw new BadRequestException(
+          'Los costos cambiaron; solicita una nueva recomendación',
+        );
+    }
     // Transacción: crear cotización + actualizar estado del pedido
     return this.prisma.$transaction(async (tx) => {
       // El cambio condicional bloquea cancelaciones o cotizaciones concurrentes.
@@ -110,7 +136,9 @@ export class QuotesService {
           orderId,
           estimatedPrice,
           details,
-          breakdown: breakdown as Prisma.InputJsonValue | undefined,
+          breakdown: calculated as unknown as Prisma.InputJsonValue | undefined,
+          professionalId: user.userId,
+          recommendationId: dto.recommendationId,
         },
       });
       return quote;

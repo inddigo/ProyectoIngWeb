@@ -1,0 +1,18 @@
+{
+  "environment": "local-only",
+  "stableSourceRevision": "5df8b25a0fd0c9826a309e4cd93bde6d3a012ab9",
+  "rolledBack": true,
+  "rollbackServices": {
+    "nestjs": "up",
+    "database": "up",
+    "pythonService": "up"
+  },
+  "restoredServices": {
+    "nestjs": "up",
+    "database": "up",
+    "pythonService": "up"
+  },
+  "finalImageRestored": true,
+  "testedAt": "2026-10-21T23:37:50.8693933Z",
+  "limitation": "Demuestra compatibilidad y recuperación en Docker local. No se ejecutó contra Render ni se prueba una migración destructiva."
+}

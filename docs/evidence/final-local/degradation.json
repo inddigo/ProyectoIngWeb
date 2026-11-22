@@ -1,0 +1,17 @@
+{
+  "environment": "local-only",
+  "testedAt": "2026-10-21T23:51:30.904135+00:00",
+  "degraded": {
+    "fallback": true,
+    "confidence": 0,
+    "references": 0,
+    "editableFields": [
+      "deadline",
+      "delivery",
+      "materials",
+      "quantity",
+      "service_type"
+    ]
+  },
+  "restored": true
+}

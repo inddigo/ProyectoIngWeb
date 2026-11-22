@@ -27,3 +27,4 @@ gha-creds-*.json
 /*.pdf
 skills-lock.json
 /demo-credentials.local.txt
+/.local-tools/

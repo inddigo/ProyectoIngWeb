@@ -1,0 +1,90 @@
+{
+  "dataset": "cotiza-synthetic-holdout-v1",
+  "dataType": "synthetic",
+  "generatedAt": "2026-10-21T23:48:50.505Z",
+  "engineVersion": "cost-history-v1",
+  "sourceSha256": "49a21fb69501192fac97d65acf86f50f107450028f0e83f728ff09371ea45ba6",
+  "caseCount": 8,
+  "adaptedCases": 7,
+  "baselineMaeClp": 7537.5,
+  "adaptiveMaeClp": 5430,
+  "cases": [
+    {
+      "id": "carpinteria",
+      "targetPrice": 56000,
+      "baseline": 45500,
+      "adaptive": 48650,
+      "adapted": true,
+      "baselineAbsoluteError": 10500,
+      "adaptiveAbsoluteError": 7350
+    },
+    {
+      "id": "diseno",
+      "targetPrice": 22500,
+      "baseline": 19500,
+      "adaptive": 21000,
+      "adapted": true,
+      "baselineAbsoluteError": 3000,
+      "adaptiveAbsoluteError": 1500
+    },
+    {
+      "id": "eventos",
+      "targetPrice": 108000,
+      "baseline": 78000,
+      "adaptive": 87000,
+      "adapted": true,
+      "baselineAbsoluteError": 30000,
+      "adaptiveAbsoluteError": 21000
+    },
+    {
+      "id": "freelance",
+      "targetPrice": 12000,
+      "baseline": 13000,
+      "adaptive": 12750,
+      "adapted": true,
+      "baselineAbsoluteError": 1000,
+      "adaptiveAbsoluteError": 750
+    },
+    {
+      "id": "textiles",
+      "targetPrice": 11200,
+      "baseline": 10400,
+      "adaptive": 10560,
+      "adapted": true,
+      "baselineAbsoluteError": 800,
+      "adaptiveAbsoluteError": 640
+    },
+    {
+      "id": "tattoo",
+      "targetPrice": 40000,
+      "baseline": 26000,
+      "adaptive": 28800,
+      "adapted": true,
+      "baselineAbsoluteError": 14000,
+      "adaptiveAbsoluteError": 11200
+    },
+    {
+      "id": "cake",
+      "targetPrice": 26000,
+      "baseline": 26000,
+      "adaptive": 26000,
+      "adapted": true,
+      "baselineAbsoluteError": 0,
+      "adaptiveAbsoluteError": 0
+    },
+    {
+      "id": "sin-historial-suficiente",
+      "targetPrice": 7500,
+      "baseline": 6500,
+      "adaptive": 6500,
+      "adapted": false,
+      "baselineAbsoluteError": 1000,
+      "adaptiveAbsoluteError": 1000
+    }
+  ],
+  "limitations": [
+    "Escenarios sintéticos pequeños, seleccionados para comprobar el comportamiento de las reglas.",
+    "No demuestran utilidad, aceptación ni reducción de tiempo con personas reales.",
+    "La mediana histórica no representa un precio óptimo de mercado."
+  ]
+}

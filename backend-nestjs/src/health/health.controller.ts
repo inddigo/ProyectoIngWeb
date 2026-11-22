@@ -2,6 +2,7 @@ import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NlpService } from '../nlp/nlp.service';
 import { getCurrentCorrelationId } from '../common/interceptors/correlation-logging.interceptor';
+import { httpMetrics } from '../common/http-metrics';
 
 @Controller('health')
 export class HealthController {
@@ -9,6 +10,11 @@ export class HealthController {
     private readonly prisma: PrismaService,
     private readonly nlpService: NlpService,
   ) {}
+
+  @Get('metrics')
+  metrics() {
+    return { service: 'backend-nestjs', ...httpMetrics.snapshot() };
+  }
 
   /**
    * Estado del orquestador y sus dependencias. La base de datos es crítica

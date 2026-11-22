@@ -2,6 +2,10 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { OrdersToolbarComponent } from '../../shared/orders-toolbar.component';
 import { filterOrders, OrderFilters } from '../../shared/order-filters';
 import { CurrencyPipe, DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { ProfessionalSettingsComponent } from '../../shared/professional-settings.component';
+import { RecommendationService } from '../../core/services/recommendation.service';
+import { ProfessionalProfile, Recommendation } from '../../core/models/recommendation.model';
 import {
   FormArray,
   FormGroup,
@@ -80,6 +84,8 @@ import {
   selector: 'app-baker-dashboard',
   imports: [
     OrdersToolbarComponent,
+    ProfessionalSettingsComponent,
+    RouterLink,
     ReactiveFormsModule,
     CurrencyPipe,
     DatePipe,
@@ -133,12 +139,20 @@ import {
       border-bottom: 1px solid var(--ion-color-light-shade);
       align-items: center;
     }
+    .adaptive-panel {
+      border: 1px solid var(--ion-color-primary);
+      border-radius: 16px;
+      padding: 18px;
+      margin: 20px 0;
+      line-height: 1.6;
+    }
   `,
   template: `
     <ion-header>
       <ion-toolbar color="primary">
         <ion-title>Panel del profesional</ion-title>
         <ion-buttons slot="end">
+          <ion-button routerLink="/mi-cuenta">Mi cuenta</ion-button>
           <ion-button (click)="load()" [disabled]="loading()">Actualizar</ion-button>
           <ion-button (click)="logout()">
             <ion-icon slot="start" name="log-out-outline"></ion-icon>
@@ -155,6 +169,7 @@ import {
       </ion-refresher>
 
       <div class="page-container"><section class="dashboard-intro"><span class="eyebrow">Tu taller</span><h1>Ideas listas para cobrar vida.</h1><p>Organiza los pedidos, revisa sus detalles y prepara tu próxima cotización.</p></section>
+        <app-professional-settings (profileChange)="profile.set($event)" />
         <app-orders-toolbar [orders]="orders()" [(filters)]="filters" />
         <p class="results-count" role="status">{{ visibleOrders().length }} de {{ orders().length }} pedidos</p>
         @if (orders().length && !visibleOrders().length) { <div class="empty-state"><p>No hay pedidos que coincidan con estos filtros.</p></div> }
@@ -251,6 +266,9 @@ import {
           <ion-content class="ion-padding">
             <form [formGroup]="calcForm" (ngSubmit)="submitQuote()">
               @if (activeOrder()?.domain === 'general') { <p class="muted">Define materiales o recursos, mano de obra y costos fijos del encargo. El precio sugerido usa tus costos; no aplicamos reglas de otros rubros.</p> }
+              <h3>Mi tiempo y costos</h3>
+              <ion-input formControlName="hours" type="number" inputmode="decimal" label="Horas de trabajo estimadas" labelPlacement="stacked" fill="outline" />
+              <ion-button fill="outline" size="small" type="button" (click)="applyProfile()" [disabled]="!profile()">Aplicar mi valor hora, costos fijos y recargo</ion-button>
               <h3>Insumos</h3>
               <ion-grid formArrayName="items" class="ion-no-padding">
                 @for (group of itemsArray.controls; track group; let i = $index) {
@@ -300,7 +318,7 @@ import {
                         <ion-input formControlName="fixedCosts" type="number" inputmode="decimal" label="Costos fijos / otros ($)" labelPlacement="stacked" fill="outline"></ion-input>
                       </ion-item>
                       <ion-item>
-                        <ion-input formControlName="profitMargin" type="number" inputmode="decimal" label="Margen de ganancia (%)" labelPlacement="stacked" fill="outline"></ion-input>
+                        <ion-input formControlName="profitMargin" type="number" inputmode="decimal" label="Recargo sobre costos (%)" labelPlacement="stacked" fill="outline"></ion-input>
                       </ion-item>
                     </ion-list>
                   </ion-col>
@@ -326,6 +344,22 @@ import {
                 </ion-row>
               </ion-grid>
 
+              <section class="adaptive-panel" aria-label="Recomendación de cotización">
+                <h3>Una referencia para decidir</h3>
+                <p>Compara tus costos con una sugerencia explicada. El precio final siempre lo decides tú.</p>
+                <ion-button type="button" size="small" (click)="recommend('adaptive')" [disabled]="recommending() || calcForm.invalid && summary().totalCost <= 0">{{ recommending() ? 'Calculando…' : 'Obtener recomendación' }}</ion-button>
+                <ion-button type="button" size="small" fill="outline" (click)="recommend('baseline')" [disabled]="recommending()">Comparar sin historial</ion-button>
+                @if (recommendation(); as rec) {
+                  <div role="status">
+                    <p><strong>{{ rec.suggestedTotal | currency:'CLP':'symbol-narrow':'1.0-0' }}</strong> · {{ rec.adapted ? 'Ajustado a tu historial' : 'Basado en tus costos' }}</p>
+                    <p>Base sin adaptación: {{ rec.baselineTotal | currency:'CLP':'symbol-narrow':'1.0-0' }} · Recargo aplicado: {{ rec.appliedMargin }}%</p>
+                    <p>{{ rec.sampleCount }} trabajos aceptados comparables de {{ rec.decisionCount }} decisiones.</p>
+                    @for (reason of rec.reasons; track reason) { <p>{{ reason }}</p> }
+                    @for (warning of rec.warnings; track warning) { <p class="muted">{{ warning }}</p> }
+                    <ion-button type="button" fill="outline" (click)="applyRecommendation()">Aplicar recomendación</ion-button>
+                  </div>
+                }
+              </section>
               <ion-list lines="none">
                 <ion-item>
                   <ion-input formControlName="finalPrice" type="number" inputmode="numeric" label="Precio final a cotizar ($)" labelPlacement="stacked" fill="outline" errorText="Ingresa un precio mayor a 0"></ion-input>
@@ -352,6 +386,11 @@ export class BakerDashboardComponent implements OnInit {
   private readonly notify = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly recommendations = inject(RecommendationService);
+  readonly profile = signal<ProfessionalProfile | null>(null);
+  readonly recommendation = signal<Recommendation | null>(null);
+  readonly recommending = signal(false);
+  private costSignature = '';
 
   readonly orders = signal<Order[]>([]);
   readonly loading = signal(false);
@@ -377,6 +416,7 @@ export class BakerDashboardComponent implements OnInit {
 
   readonly calcForm = this.fb.group({
     items: this.fb.array<FormGroup>([]),
+    hours: [0, [Validators.min(0), Validators.max(100000)]],
     laborCost: [0, Validators.min(0)],
     fixedCosts: [0, Validators.min(0)],
     profitMargin: [30, [Validators.min(0), Validators.max(500)]],
@@ -422,12 +462,14 @@ export class BakerDashboardComponent implements OnInit {
     }
     const design = attrs['service_type'] ?? attrs['theme'] ?? attrs['style'] ?? 'personalizado';
     this.calcForm.patchValue({
+      hours: 0,
       laborCost: order.domain === 'general' ? 0 : order.domain === 'tattoo' ? 15000 * Math.ceil(quantity / 5) : 5000 + quantity * 100,
       fixedCosts: order.domain === 'general' ? 0 : 2000,
       profitMargin: 30,
       details: `Cotización para ${DOMAIN_LABELS[order.domain] ?? order.domain}. Diseño: ${design}.`,
     });
     this.ruleEstimate.set(null);
+    this.recommendation.set(null);
     this.syncCostInputs();
     this.useSuggested();
     this.activeOrder.set(order);
@@ -435,6 +477,32 @@ export class BakerDashboardComponent implements OnInit {
 
   closeCalculator(): void {
     this.activeOrder.set(null);
+    this.recommendation.set(null);
+  }
+
+  applyProfile(): void {
+    const p = this.profile();
+    if (!p) return;
+    this.calcForm.patchValue({ laborCost: Math.round(Number(this.calcForm.controls.hours.value) * p.hourlyRate), fixedCosts: p.fixedCosts, profitMargin: p.profitMargin });
+    this.useSuggested();
+  }
+
+  recommend(mode: 'adaptive' | 'baseline'): void {
+    const order = this.activeOrder();
+    if (!order || this.recommending()) return;
+    const value = this.calcForm.getRawValue();
+    const costs = { items: this.costInputs(), laborCost: Number(value.laborCost), fixedCosts: Number(value.fixedCosts), profitMargin: Number(value.profitMargin) };
+    const signature = this.costSignature;
+    this.recommending.set(true);
+    this.recommendations.calculate(order.id, costs, mode).subscribe({ next: result => {
+      this.recommending.set(false);
+      if (this.activeOrder()?.id === order.id && this.costSignature === signature) this.recommendation.set(result);
+    }, error: e => { this.recommending.set(false); this.notify.show(apiErrorMessage(e, 'No se pudo obtener la recomendación'), 'danger'); } });
+  }
+
+  applyRecommendation(): void {
+    const rec = this.recommendation();
+    if (rec) this.calcForm.controls.finalPrice.setValue(rec.suggestedTotal);
   }
 
   addItem(): void {
@@ -478,12 +546,12 @@ export class BakerDashboardComponent implements OnInit {
         orderId: order.id,
         estimatedPrice: Number(value.finalPrice),
         details: value.details,
+        recommendationId: this.recommendation()?.id,
         breakdown: {
           items: this.costInputs(),
           laborCost: Number(value.laborCost),
           fixedCosts: Number(value.fixedCosts),
           profitMargin: Number(value.profitMargin),
-          ...this.summary(),
         },
       })
       .subscribe({
@@ -517,6 +585,9 @@ export class BakerDashboardComponent implements OnInit {
 
   private syncCostInputs(): void {
     const v = this.calcForm.getRawValue();
+    const signature = JSON.stringify([v.items, v.laborCost, v.fixedCosts, v.profitMargin]);
+    if (this.costSignature !== signature) this.recommendation.set(null);
+    this.costSignature = signature;
     this.costInputs.set(v.items as CostItem[]);
     this.extras.set({
       laborCost: Number(v.laborCost),

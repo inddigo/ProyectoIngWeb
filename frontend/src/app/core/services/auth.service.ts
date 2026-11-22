@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, Role, User } from '../models/user.model';
+import { OrderDraftService } from './order-draft.service';
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
@@ -17,6 +18,7 @@ export interface RegisterPayload {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly drafts = inject(OrderDraftService);
   private readonly baseUrl = `${environment.apiUrl}/auth`;
 
   readonly currentUser = signal<User | null>(readStoredUser());
@@ -35,11 +37,20 @@ export class AuthService {
   }
 
   logout(): void {
+    this.drafts.clear();
     safeStorage(() => {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
     });
     this.currentUser.set(null);
+  }
+
+  updateName(name: string): void {
+    const user = this.currentUser();
+    if (!user) return;
+    const updated = { ...user, name };
+    safeStorage(() => localStorage.setItem(USER_KEY, JSON.stringify(updated)));
+    this.currentUser.set(updated);
   }
 
   getToken(): string | null {

@@ -36,7 +36,10 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  orders Order[]
+  orders              Order[]
+  quotes              Quote[]
+  professionalProfile ProfessionalProfile?
+  recommendations     Recommendation[]
 
   @@map("users")
 }
@@ -54,9 +57,10 @@ model Order {
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
-  client        User           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  webReferences WebReference[]
-  quote         Quote?
+  client          User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  webReferences   WebReference[]
+  quote           Quote?
+  recommendations Recommendation[]
 
   @@index([status])
   @@index([clientId])
@@ -85,17 +89,48 @@ model WebReference {
   @@map("web_references")
 }
 
-
 model Quote {
-  id             String   @id @default(uuid())
-  orderId        String   @unique @map("order_id")
-  estimatedPrice Decimal  @map("estimated_price") @db.Decimal(10, 2)
-  details        String
+  id               String   @id @default(uuid())
+  orderId          String   @unique @map("order_id")
+  estimatedPrice   Decimal  @map("estimated_price") @db.Decimal(10, 2)
+  details          String
   // Desglose de la calculadora de costos (insumos, mano de obra, margen)
-  breakdown      Json?
-  createdAt      DateTime @default(now()) @map("created_at")
+  breakdown        Json?
+  professionalId   String?  @map("professional_id")
+  recommendationId String?  @unique @map("recommendation_id")
+  createdAt        DateTime @default(now()) @map("created_at")
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  professional   User?           @relation(fields: [professionalId], references: [id], onDelete: SetNull)
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
 
+  @@index([professionalId, createdAt])
   @@map("quotes")
+}
+
+model ProfessionalProfile {
+  userId       String   @id @map("user_id")
+  hourlyRate   Decimal  @default(0) @map("hourly_rate") @db.Decimal(10, 2)
+  fixedCosts   Decimal  @default(0) @map("fixed_costs") @db.Decimal(10, 2)
+  profitMargin Float    @default(30) @map("profit_margin")
+  useHistory   Boolean  @default(false) @map("use_history")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("professional_profiles")
+}
+
+model Recommendation {
+  id             String   @id @default(uuid())
+  orderId        String   @map("order_id")
+  professionalId String   @map("professional_id")
+  input          Json
+  result         Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  professional   User     @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  quote          Quote?
+
+  @@index([professionalId, createdAt])
+  @@map("recommendations")
 }

@@ -1,0 +1,49 @@
+{
+  "testedAt": "2026-10-21T23:56:53.854707+00:00",
+  "environment": "local-only",
+  "baseRevision": "5df8b25a0fd0c9826a309e4cd93bde6d3a012ab9",
+  "uncommitted": true,
+  "published": false,
+  "automatedTests": {
+    "backendJest": 81,
+    "frontendAngular": 26,
+    "pythonPytest": 38,
+    "scriptUnittest": 7,
+    "total": 152
+  },
+  "integrationChecks": 45,
+  "semgrep": {
+    "rules": 655,
+    "files": 221,
+    "findings": 0
+  },
+  "gitleaks": {
+    "scope": "exported source tree including untracked files",
+    "findings": 0
+  },
+  "runtimeNpmAudit": {
+    "backend": 0,
+    "frontend": 0
+  },
+  "trivy": {
+    "api": {
+      "imageId": "sha256:6e217f840a3501c44da73ce0fdd475cf7b75470b148eba9675ce80a67c3cc1a5",
+      "fixableHighCritical": 0
+    },
+    "web": {
+      "imageId": "sha256:3b5e267c246c722409017f878f0f3517ccf3d6b176718053aa4a79b5839832ef",
+      "fixableHighCritical": 0
+    },
+    "python": {
+      "imageId": "sha256:bcde5de261fd4f2e9d3b84186b24d96130acb0dc52e34cfab4e631709093297d",
+      "fixableHighCritical": 0
+    }
+  },
+  "pending": [
+    "Real user observations",
+    "Android APK, emulator/device execution and instrumented test",
+    "Complete manual accessibility review",
+    "External Figma and project board update",
+    "Publication, final CI, real-source staging verification and final release"
+  ]
+}

@@ -110,7 +110,7 @@ check "cancelado no admite cotización -> 409" "$(code -X POST -H "Authorization
 
 echo "10. Cotización general y rechazo del cliente"
 GENERAL_QUOTE_ID=$(post /api/v1/orders "$GENERAL_BODY" "$CLIENT_TOKEN" | json "d['id']")
-post /api/v1/quotes "{\"orderId\":\"$GENERAL_QUOTE_ID\",\"estimatedPrice\":12000,\"details\":\"Materiales y mano de obra\",\"breakdown\":{\"laborCost\":6000,\"fixedCosts\":2000}}" "$BAKER_TOKEN" >/dev/null
+post /api/v1/quotes "{\"orderId\":\"$GENERAL_QUOTE_ID\",\"estimatedPrice\":12000,\"details\":\"Materiales y mano de obra\",\"breakdown\":{\"items\":[],\"laborCost\":6000,\"fixedCosts\":2000,\"profitMargin\":30}}" "$BAKER_TOKEN" >/dev/null
 check "pedido cotizado no se cancela -> 409" "$(code -X PATCH -H "Authorization: Bearer $CLIENT_TOKEN" "$BASE/api/v1/orders/$GENERAL_QUOTE_ID/cancel" -d '{}')" "409"
 REJECTED=$(curl -sf -X PATCH -H 'Content-Type: application/json' -H "Authorization: Bearer $CLIENT_TOKEN" "$BASE/api/v1/orders/$GENERAL_QUOTE_ID/status" -d '{"status":"REJECTED_BY_CLIENT"}')
 check "rechazo persistido" "$(echo "$REJECTED" | json "d['status']")" "REJECTED_BY_CLIENT"

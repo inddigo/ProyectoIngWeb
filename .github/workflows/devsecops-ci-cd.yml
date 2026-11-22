@@ -74,6 +74,14 @@ jobs:
       - name: Pruebas unitarias con cobertura
         run: npm run test:cov
       - run: npm run build
+      - name: Evaluación reproducible de adaptación (datos sintéticos)
+        run: node ../scripts/evaluate-final.cjs ../final-adaptation-evidence.json
+      - name: Resultados del motor adaptativo
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: final-adaptation-evidence
+          path: final-adaptation-evidence.json
+          retention-days: 30
       - name: Auditoría de dependencias de runtime (bloquea HIGH/CRITICAL)
         run: npm audit --omit=dev --audit-level=high
 
@@ -100,6 +108,22 @@ jobs:
         run: npx ng build --configuration production
       - name: Build para Android (Capacitor)
         run: npx ng build --configuration android && npx cap sync android
+      - name: Compilar APK Android y ejecutar lint nativo
+        run: |
+          : "${JAVA_HOME_21_X64:?El runner debe proporcionar Java 21}"
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          cd android
+          bash gradlew --no-daemon assembleDebug lintDebug testDebugUnitTest
+      - name: APK de demostración y diagnóstico Android
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cotiza-android-debug
+          path: |
+            frontend/android/app/build/outputs/apk/debug/app-debug.apk
+            frontend/android/app/build/reports/lint-results-debug.html
+          if-no-files-found: error
+          retention-days: 30
       - name: Auditoría de dependencias de runtime (bloquea HIGH/CRITICAL)
         run: npm audit --omit=dev --audit-level=high
 
@@ -124,6 +148,8 @@ jobs:
         run: pytest --cov=app --cov-report=term-missing
       - name: Seguridad del despliegue (plan gratuito y SHA correcto)
         run: python -m unittest discover -s ../scripts -p test_deploy_render.py
+      - name: Validación de evaluación anónima
+        run: python -m unittest discover -s ../scripts -p test_user_study.py
       - name: Auditoría de dependencias (pip-audit)
         run: pip-audit -r requirements.txt
 
@@ -202,6 +228,10 @@ jobs:
         run: docker compose up -d --wait --wait-timeout 180
       - name: Prueba de humo de extremo a extremo
         run: ./scripts/smoke-test.sh http://localhost:8080
+      - name: Adaptación, historial y privacidad sobre PostgreSQL aislado
+        run: |
+          python3 -m pip install httpx==0.28.1
+          python3 scripts/final-check.py --base http://localhost:8080 --output ep2-ci-evidence/final-integration.json
       - name: Evidencia de integración (fuente sintética)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

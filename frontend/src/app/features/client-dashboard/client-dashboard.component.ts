@@ -88,6 +88,7 @@ import { Router } from '@angular/router';
       <ion-toolbar color="primary">
         <ion-title>Mis pedidos</ion-title>
         <ion-buttons slot="end">
+          <ion-button routerLink="/mi-cuenta">Mi cuenta</ion-button>
           <ion-button (click)="load()" [disabled]="loading()">Actualizar</ion-button>
           <ion-button routerLink="/">
             <ion-icon slot="start" name="add-outline"></ion-icon>

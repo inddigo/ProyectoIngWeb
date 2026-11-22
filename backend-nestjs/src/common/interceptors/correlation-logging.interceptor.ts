@@ -9,6 +9,7 @@ import { AsyncLocalStorage } from 'async_hooks';
 import { randomUUID } from 'crypto';
 import { Request, Response } from 'express';
 import { Observable, tap } from 'rxjs';
+import { httpMetrics } from '../http-metrics';
 
 export const correlationStorage = new AsyncLocalStorage<{
   correlationId: string;
@@ -82,6 +83,8 @@ export class CorrelationLoggingInterceptor implements NestInterceptor {
     correlationId: string,
     error?: string,
   ): void {
+    if (!req.path.startsWith('/health'))
+      httpMetrics.record(statusCode, durationMs);
     const entry = JSON.stringify({
       timestamp: new Date().toISOString(),
       level: statusCode >= 500 ? 'ERROR' : statusCode >= 400 ? 'WARN' : 'INFO',

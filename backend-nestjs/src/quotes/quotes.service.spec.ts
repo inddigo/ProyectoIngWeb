@@ -53,7 +53,13 @@ describe('QuotesService.createQuote', () => {
       status: 'CONFIRMED_BY_CLIENT',
     });
     tx.quote.create.mockResolvedValue({ id: 'q1' });
-    await expect(service.createQuote(dto)).resolves.toEqual({ id: 'q1' });
+    await expect(
+      service.createQuote(dto, {
+        userId: 'pro1',
+        email: 'pro@example.test',
+        role: 'BAKER',
+      }),
+    ).resolves.toEqual({ id: 'q1' });
     expect(tx.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'QUOTED' } }),
     );
@@ -61,9 +67,13 @@ describe('QuotesService.createQuote', () => {
 
   it('no permite cotizar dos veces el mismo pedido', async () => {
     prisma.order.findUnique.mockResolvedValue({ status: 'QUOTED' });
-    await expect(service.createQuote(dto)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.createQuote(dto, {
+        userId: 'pro1',
+        email: 'pro@example.test',
+        role: 'BAKER',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('no crea cotizaciones si el cliente canceló durante el cálculo', async () => {
@@ -71,9 +81,13 @@ describe('QuotesService.createQuote', () => {
       status: 'CONFIRMED_BY_CLIENT',
     });
     tx.order.updateMany.mockResolvedValue({ count: 0 });
-    await expect(service.createQuote(dto)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.createQuote(dto, {
+        userId: 'pro1',
+        email: 'pro@example.test',
+        role: 'BAKER',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(tx.quote.create).not.toHaveBeenCalled();
   });
 });

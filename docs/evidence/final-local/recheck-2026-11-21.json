@@ -1,0 +1,30 @@
+{
+  "checked_at": "2026-11-21",
+  "scope": "working tree before commit",
+  "results": {
+    "backend": {
+      "lint": "passed",
+      "format": "passed",
+      "unit_tests": "81 passed across 14 suites",
+      "build": "passed"
+    },
+    "frontend": {
+      "lint": "passed",
+      "unit_tests": "26 passed in ChromeHeadless",
+      "production_build": "passed"
+    },
+    "python": {
+      "not_run": "the local Python environment lacks FastAPI and spaCy; Docker Desktop is unavailable"
+    },
+    "dependency_audit": {
+      "not_run": "npm audit could not reach registry.npmjs.org from this environment"
+    },
+    "integration": {
+      "not_run": "Docker Desktop is unavailable"
+    }
+  },
+  "notes": [
+    "Initial backend and frontend attempts were blocked by sandbox loopback restrictions; reruns with local loopback access passed.",
+    "The GitHub Actions run for this working tree is required to validate Python, dependency audits, container integration, and Android build."
+  ]
+}

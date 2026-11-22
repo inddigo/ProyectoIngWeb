@@ -89,6 +89,7 @@ export interface CreateQuotePayload {
   estimatedPrice: number;
   details: string;
   breakdown?: Record<string, unknown>;
+  recommendationId?: string;
 }
 
 export interface QuoteEstimate {

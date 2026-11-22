@@ -1,4 +1,6 @@
-> **Staging EP2:** Render Free + Neon Free. Configuración activa: `terraform/render`; guía: [docs/staging.md](docs/staging.md). Google Cloud y sus scripts quedan históricos. Staging público: [cotiza-ep2-web.onrender.com](https://cotiza-ep2-web.onrender.com), con flujo real verificado.
+> **Candidata a Entrega Final:** [guía, funciones y verificaciones pendientes](docs/entrega-final.md). Para revisar: `docker compose -p cotiza-final-local -f docker-compose.yml -f docker-compose.final-local.yml up -d --build --wait`, y abrir `http://localhost:18080`. El staging publicado sigue en EP2 hasta que termine la validación CI y se recupere el despliegue Render.
+>
+> **Staging publicado de EP2:** Render Free + Neon Free. Configuración activa: `terraform/render`; guía: [docs/staging.md](docs/staging.md). Google Cloud y sus scripts quedan históricos. Staging público: [cotiza-ep2-web.onrender.com](https://cotiza-ep2-web.onrender.com). Las funciones nuevas de la final se revisan localmente.
 
 # Cotiza — Plataforma de cotización inteligente para servicios personalizados
 
@@ -13,6 +15,7 @@ PostgreSQL con metadatos de procedencia y permite al profesional cotizar con una
 costos asistida por reglas. El cliente sigue su pedido y acepta o rechaza la cotización. Ambos paneles incluyen búsqueda por texto o número, filtros de rubro/estado, resumen de pedidos y actualización manual. El cliente puede cancelar antes de recibir una cotización.
 
 - **Definición del proyecto y especificación EP2** (problema, fuente web, limpieza, métricas, diseño adaptativo): [docs/proyecto.md](docs/proyecto.md)
+- **Entrega final local**: [docs/entrega-final.md](docs/entrega-final.md), [reglas y privacidad](docs/ADR/007-recomendaciones-explicables-y-privacidad.md), [evaluación con usuarios](docs/evaluation/protocolo-usuarios.md) y [guion de defensa](docs/presentacion-final.md).
 - **Arquitectura** (contexto C4, contenedores, despliegue, modelo de datos e índices, flujo, ADR 001–006): [docs/arquitectura.md](docs/arquitectura.md)
 - **Ambiente de staging e infraestructura (Terraform)**: [docs/staging.md](docs/staging.md)
 - **Prototipo en Figma**: [E1 — prototipo de interfaz](https://www.figma.com/design/u0EsbFF2IfE2B7LOor9WzQ/E1?node-id=3-90)
@@ -81,6 +84,8 @@ Swagger de NestJS: `/api/docs`; especificación OpenAPI: `/api/docs-json`. FastA
 ### 4.1. API principal — Backend Orquestador (`backend-nestjs`, puerto `3000`)
 
 Todas las respuestas incluyen la cabecera `X-Correlation-Id` para trazabilidad de extremo a extremo.
+
+La ampliación final local incorpora `GET/PUT /api/v1/quotes/profile`, `DELETE /api/v1/quotes/history` y `POST /api/v1/quotes/recommend/:orderId`, exclusivos de `BAKER`; `GET/PATCH/DELETE /auth/account` para gestionar la cuenta autenticada; y `GET /health/metrics` para diagnóstico agregado. El desglose de una cotización acepta costos e insumos, con totales recalculados en el servidor, y un `recommendationId` opcional. Contratos y límites: [entrega-final.md](docs/entrega-final.md).
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|

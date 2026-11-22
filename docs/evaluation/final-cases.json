@@ -1,0 +1,14 @@
+{
+  "dataset": "cotiza-synthetic-holdout-v1",
+  "description": "Casos inventados para comprobar reglas. Los precios objetivo son escenarios de referencia fijados a mano; no son precios de mercado ni resultados con usuarios.",
+  "cases": [
+    {"id":"carpinteria", "domain":"general", "attributes":{"service_type":"Carpintería","materials":"Madera"}, "cost":35000, "targetPrice":56000, "history":[[10000,16000],[20000,32000],[15000,24000],[10000,15000],[20000,34000],[30000,48000]]},
+    {"id":"diseno", "domain":"general", "attributes":{"service_type":"Diseño","materials":"Digital"}, "cost":15000, "targetPrice":22500, "history":[[10000,15000],[20000,30000],[12000,18000],[8000,12000],[10000,14500],[10000,15500],[20000,30000],[10000,15000],[10000,15000],[10000,15000]]},
+    {"id":"eventos", "domain":"general", "attributes":{"service_type":"Eventos","materials":"Tela"}, "cost":60000, "targetPrice":108000, "history":[[10000,18000],[20000,36000],[15000,27000],[10000,17000],[10000,19000],[20000,36000],[30000,54000],[10000,18000],[10000,18000],[10000,18000]]},
+    {"id":"freelance", "domain":"general", "attributes":{"service_type":"Edición de textos","materials":"Digital"}, "cost":10000, "targetPrice":12000, "history":[[10000,12000],[20000,24000],[15000,18000],[10000,12500],[10000,11500]]},
+    {"id":"textiles", "domain":"general", "attributes":{"service_type":"Confección","materials":"Tela"}, "cost":8000, "targetPrice":11200, "history":[[10000,14000],[20000,28000],[10000,13500],[10000,14500]]},
+    {"id":"tattoo", "domain":"tattoo", "attributes":{"style":"A color"}, "cost":20000, "targetPrice":40000, "history":[[10000,20000],[20000,40000],[10000,19000],[10000,21000]]},
+    {"id":"cake", "domain":"cake", "attributes":{"theme":"Boda","dietary_restrictions":["Vegana"]}, "cost":20000, "targetPrice":26000, "history":[[10000,13000],[20000,26000],[10000,12500],[10000,13500]]},
+    {"id":"sin-historial-suficiente", "domain":"general", "attributes":{"service_type":"Restauración","materials":"Metal"}, "cost":5000, "targetPrice":7500, "history":[[10000,15000],[20000,30000]]}
+  ]
+}

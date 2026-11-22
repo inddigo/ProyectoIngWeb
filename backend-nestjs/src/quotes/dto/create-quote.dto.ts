@@ -9,6 +9,9 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CostsDto } from './recommendation.dto';
 
 export class CreateQuoteDto {
   @IsUUID()
@@ -25,7 +28,13 @@ export class CreateQuoteDto {
   details: string;
 
   /** Desglose de la calculadora (insumos, mano de obra, margen). */
-  @IsObject()
   @IsOptional()
-  breakdown?: Record<string, unknown>;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CostsDto)
+  breakdown?: CostsDto;
+
+  @IsOptional()
+  @IsUUID()
+  recommendationId?: string;
 }

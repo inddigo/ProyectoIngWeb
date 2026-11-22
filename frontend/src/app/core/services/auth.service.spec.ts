@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
+import { OrderDraftService } from './order-draft.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -28,9 +29,12 @@ describe('AuthService', () => {
   });
 
   it('limpia la sesión al cerrar sesión', () => {
+    const drafts = TestBed.inject(OrderDraftService);
+    drafts.save({ domain: 'general', rawText: 'Borrador privado', referenceImage: '', structured: null });
     service.currentUser.set({ id: '1', email: 'c@c.cl', name: 'C', role: 'CLIENT' });
     service.logout();
     expect(service.isAuthenticated()).toBeFalse();
     expect(service.getToken()).toBeNull();
+    expect(drafts.draft()).toBeNull();
   });
 });
